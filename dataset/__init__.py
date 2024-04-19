@@ -5,3 +5,4 @@ from dataset.adni import ADNIDataset
 from dataset.duke import DUKEDataset
 from dataset.lidc import LIDCDataset
 from dataset.default import DEFAULTDataset
+from dataset.spinegeneric import SPINEGENERICDataset
