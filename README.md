@@ -1,14 +1,24 @@
-# Medical Diffusion
+﻿# Counterfactual_synthesis_for_lesion_segmentation
 
+This project aims at segmenting multiple sclerosis lesions in the Spinal Cord on MRI images. 
+The main idea consists in training model on healthy patients that is able to recover the initial image after degradation. Then using it on images with lesions and segment the lesion based on the differences between original and recovered image.
+
+## Simple 2D diffusion model
+
+This first model, in it's dedicated branch implement a 2D diffusion model without a latent splace
+
+## Medical Diffusion implementation
+
+This branch is based on the repo [medical diffusion](https://github.com/FirasGit/medicaldiffusion)
 This repository contains the code to our paper "Medical Diffusion: Denoising Diffusion Probabilistic Models for 3D Medical Image Synthesis"
 (see https://arxiv.org/abs/2211.03364).
 
 ![Generated Samples by our Medical Diffusion model](assets/generated_samples.gif)
 
-# System Requirements
+### System Requirements
 This code has been tested on Ubuntu 20.04 and an NVIDIA Quadro RTX 6000 GPU. Furthermore it was developed using Python v3.8.
 
-# Setup
+### Setup
 In order to run our model, we suggest you create a virtual environment 
 ```
 conda create -n medicaldiffusion python=3.8
@@ -22,7 +32,7 @@ Subsequently, download and install the required libraries by running
 pip install -r requirements.txt
 ```
 
-# Training
+### Training
 Once all libraries are installed and the datasets have been downloaded, you are ready to train the model:
 
 First, we need to train the three-dimensional VQ-GAN model. To do so in the BraTS dataset, you can run the following command:
@@ -38,7 +48,7 @@ python train/train_ddpm.py model=ddpm dataset=brats model.results_folder_postfix
 ```
 Where you again need to specify the path to the VQ-GAN checkpoint from before (e.g. ```model.vqgan_ckpt='/home/<user>/Desktop/medicaldiffusion/checkpoints/vq_gan/BRATS/flair/lightning_logs/version_0/checkpoints/latest_checkpoint.ckpt'```)
 
-# Train on your own dataset
+### Train on your own dataset
 To simpify the dataloading for your own dataset, we provide a default dataset that simply requires the path to the folder with your NifTI images inside, i.e.
 
     root_dir/					# Path to the folder that contains the images
@@ -61,7 +71,7 @@ python train/train_ddpm.py model=ddpm dataset=default model.results_folder_postf
 Where you again need to specify the path to the VQ-GAN checkpoint from before (e.g. ```model.vqgan_ckpt='/home/<user>/Desktop/medicaldiffusion/checkpoints/vq_gan/DEFAULT/own_dataset/lightning_logs/version_0/checkpoints/latest_checkpoint.ckpt'```)
 
 
-# Citation
+### Citation
 To cite our work, please use
 ```
 @misc{https://doi.org/10.48550/arxiv.2211.03364,
@@ -75,7 +85,7 @@ To cite our work, please use
 ```
 
 
-# Acknowledgement
+### Acknowledgement
 This code is heavily build on the following repositories:
 
 (1) https://github.com/SongweiGe/TATS
