@@ -19,6 +19,7 @@ from monai.transforms import (
     SqueezeDim,
     RandRotate,
     RandSimulateLowResolution,
+    ScaleIntensity,
     SpatialPad,
 )
 import torch
@@ -100,6 +101,7 @@ def paths_to_Dataset(pd_data, val = False):
         # select a random slice from the volume shaped : (32, 256, 256)
         RandSpatialCrop(roi_size=(256, 256), random_center=True, random_size=False),
         SpatialPad( spatial_size=(256, 256)),
+        ScaleIntensity(minv=0.0, maxv=1.0),
         ToTensor(),
     ])
         
@@ -110,9 +112,10 @@ def paths_to_Dataset(pd_data, val = False):
         # select a random slice from the volume shaped : (32, 256, 256)
         RandSpatialCrop(roi_size=(256, 256), random_center=True, random_size=False),
         SpatialPad( spatial_size=(256, 256)),
+        ScaleIntensity(minv=0.0, maxv=1.0),
         RandRotate90(prob=0.5),
         RandFlip(prob=0.5),
-        RandShiftIntensity(offsets=0.1, prob=0.5),
+        # normalise between 0 and 1
         RandRotate(range_x=0.3, range_y=0.3, prob=0.2),
         ToTensor(),
         ])

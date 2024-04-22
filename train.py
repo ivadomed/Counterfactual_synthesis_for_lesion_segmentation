@@ -38,6 +38,8 @@ def train_one_epoch(model, train_loader, criterion, optimizer):
         inputs = inputs.to(device)
         optimizer.zero_grad()
         outputs = model(inputs)
+        print(inputs.min().item())
+        print(inputs.max().item())
         loss = criterion(outputs, inputs)
         loss.backward()
         optimizer.step()
@@ -71,13 +73,13 @@ if model_path != 'none':
 model.to(device)
 # define the optimizer
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-# define the loss function
-criterion = nn.MSELoss()
+# define the binary cross entropy loss function
+criterion = nn.BCELoss()
 # define the data loader
 dataloader = DataLoader(train_dataset, batch_size=4, shuffle=True)
 
 # Define the number of epochs
-num_epochs = 1
+num_epochs = 10
 
 for epoch in range(num_epochs):
     print(f"Epoch {epoch + 1} / {num_epochs}")

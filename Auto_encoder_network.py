@@ -3,7 +3,7 @@ import torch.nn as nn
 import torchvision.models as models
 import torch.nn.functional as F
 
-class AutoEncoder_2D(nn.Module):
+class AutoEncoder_2D_Conv(nn.Module):
     def __init__(self):
         super(AutoEncoder_2D, self).__init__()
         
@@ -34,6 +34,39 @@ class AutoEncoder_2D(nn.Module):
         x = self.encoder(x)
         x = self.decoder(x)
         return x
+
+# Create a network that take single channel 256x256 2D images as input and output the same size images using a MLP strucutre
+class AutoEncoder_2D(nn.Module):
+    def __init__(self):
+        super(AutoEncoder_2D, self).__init__()
+        
+        # Encoder
+        self.encoder = nn.Sequential(
+            nn.Linear(256*256, 128),
+            nn.ReLU(inplace=True),
+            nn.Linear(128, 64),
+            nn.ReLU(inplace=True),
+            nn.Linear(64, 32),
+            nn.ReLU(inplace=True)
+        )
+        
+        # Decoder
+        self.decoder = nn.Sequential(
+            nn.Linear(32, 64),
+            nn.ReLU(inplace=True),
+            nn.Linear(64, 128),
+            nn.ReLU(inplace=True),
+            nn.Linear(128, 256*256),
+            nn.Sigmoid()
+        )
+        
+    def forward(self, x):
+        x = x.view(x.size(0), -1)
+        x = self.encoder(x)
+        x = self.decoder(x)
+        x = x.view(x.size(0), 1, 256, 256)
+        return x
+
 
 
 
