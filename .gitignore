@@ -1,6 +1,6 @@
-/data
-/checkpoints
+data/
+checkpoints/
+outputs/
 AE2D.ipnyb
 /__pycache__
-INF581A - Basic_GAN.ipnyb
-/MNIST
+test.py
