@@ -75,7 +75,7 @@ model.to(device)
 # define the optimizer
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 # define the binary cross entropy loss function
-criterion = nn.BCELoss()
+criterion = nn.MSELoss()
 # define the data loader
 dataloader = DataLoader(train_dataset, batch_size=4, shuffle=True)
 
