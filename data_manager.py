@@ -72,7 +72,7 @@ def fetch_all_T2w_paths(source_folder):
 
         if 'T2w' in str(p) and 'derivatives' not in str(p) and "code" not in str(p) and ".git" not in str(p):
             
-            seg_path = str(p).replace('.nii.gz', '_softseg.nii.gz').replace('data-multi-subject','data-multi-subject\derivatives\labels_softseg')
+            seg_path = str(p).replace('.nii.gz', '_softseg.nii.gz').replace('data-multi-subject','data-multi-subject/derivatives/labels_softseg')
             #check id seg_path, relative path exists
             if not os.path.exists(seg_path):
                 print(f"Warning: {seg_path} does not exist. Skipping...")

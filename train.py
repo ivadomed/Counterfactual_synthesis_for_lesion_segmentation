@@ -20,7 +20,10 @@ parser.add_argument('--model_path', type=str, default='none',
                     help='the path to the model, Random weights by Default')
 parser.add_argument('--model_output', type=str, default='checkpoints//model.pth',
                     help='the path to the output model, checkpoints//model.pth by Default')
-
+parser.add_argument('--data_path', type=str, default='data//data-multi-subject//',
+                    help='the path to the data, data//data-multi-subject// by Default')
+parser.add_argument('--num_epochs', type=int, default=200,
+                    help='the number of epochs, 200 by Default')
 # Parse the arguments
 args = parser.parse_args()
 
@@ -28,6 +31,8 @@ args = parser.parse_args()
 evaluate = args.evaluate
 model_path = args.model_path
 model_output = args.model_output
+data_path = args.data_path
+num_epochs = args.num_epochs
 
 # Define the training loop
 def train_one_epoch(model, train_loader, criterion, optimizer):
@@ -38,8 +43,6 @@ def train_one_epoch(model, train_loader, criterion, optimizer):
         inputs = inputs.to(device)
         optimizer.zero_grad()
         outputs = model(inputs)
-        print(inputs.min().item())
-        print(inputs.max().item())
         loss = criterion(outputs, inputs)
         loss.backward()
         optimizer.step()
@@ -47,11 +50,9 @@ def train_one_epoch(model, train_loader, criterion, optimizer):
     return model, running_loss / len(train_loader)
 
 #### Load the data
-# Define the base directory
-base_dir = "data//data-multi-subject//"
 
 # Find the relative paths of the T1w and T2w files in the specified directory
-t1w_file_paths, t2w_file_paths = fetch_all_T2w_paths(base_dir)
+t1w_file_paths, t2w_file_paths = fetch_all_T2w_paths(data_path)
 
 # Split the data into training and validation sets
 pd_train_data, pd_val_data = dataset_splitter(t1w_file_paths, t2w_file_paths)
@@ -77,9 +78,6 @@ optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 criterion = nn.BCELoss()
 # define the data loader
 dataloader = DataLoader(train_dataset, batch_size=4, shuffle=True)
-
-# Define the number of epochs
-num_epochs = 10
 
 for epoch in range(num_epochs):
     print(f"Epoch {epoch + 1} / {num_epochs}")

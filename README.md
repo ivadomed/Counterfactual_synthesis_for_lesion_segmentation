@@ -14,7 +14,7 @@ Tries to reconstruct the IRM data with a simple autoencoder
 ### Usage
 
 In order to launch the training, one can use this command :
-`python train.py --evaluate True --model_path /path/to/model.pth --model_output path/to/model_out.pth`
+`python train.py --evaluate True --model_path /path/to/model.pth --model_output path/to/model_out.pth --data_path path\to\data-multi-subject --num_epochs number_of_epochs'
 
 
 ### Dataset
