@@ -50,6 +50,7 @@ class Auto_encoder_Dataset(Dataset):
         indices = list(dict.fromkeys(indices))
         med = int(np.median(indices))
         selected_slice = rd.randint(med-16, high=med+16)
+        #selected_slice = med
         # if the list is not continuous, print a warning
         img = np.take(img, selected_slice, axis=0)
         seg = np.take(seg, selected_slice, axis=0)

@@ -22,11 +22,13 @@ class AutoEncoder_2D(nn.Module):
         
         # Decoder
         self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(256, 128, kernel_size=2, stride=2),
+            nn.ConvTranspose2d(256, 128, kernel_size=5, stride=2, padding=1),
             nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2),
+            nn.ConvTranspose2d(128, 64, kernel_size=3, stride=2, padding=1),
             nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(64, 1, kernel_size=2, stride=2),
+            nn.ConvTranspose2d(64, 32, kernel_size=2, stride=2, padding=1),
+            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(32, 1, kernel_size=3, stride=1, padding=1), 
             nn.Sigmoid()
         )
         
