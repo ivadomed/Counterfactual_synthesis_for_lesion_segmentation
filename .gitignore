@@ -1,6 +1,4 @@
 data/
 checkpoints/
 outputs/
-AE2D.ipnyb
 /__pycache__
-test.py

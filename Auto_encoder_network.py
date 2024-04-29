@@ -37,10 +37,45 @@ class AutoEncoder_2D(nn.Module):
         x = self.decoder(x)
         return x
 
+class AutoEncoder_2D_low(nn.Module):
+    def __init__(self):
+        super(AutoEncoder_2D_low, self).__init__()
+        
+        # Encoder
+        self.encoder = nn.Sequential(
+            nn.Conv2d(1, 4, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(4, 8, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(8, 16, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2)
+        )
+        
+        # Decoder
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(16, 8, kernel_size=5, stride=2, padding=1),
+            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(8, 4, kernel_size=3, stride=2, padding=1),
+            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(4, 2, kernel_size=2, stride=2, padding=1),
+            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(2, 1, kernel_size=3, stride=1, padding=1), 
+            nn.Sigmoid()
+        )
+        
+    def forward(self, x):
+        x = self.encoder(x)
+        x = self.decoder(x)
+        return x
+
+
 # Create a network that take single channel 256x256 2D images as input and output the same size images using a MLP strucutre
 class AutoEncoder_2D_MLP(nn.Module):
     def __init__(self):
-        super(AutoEncoder_2D, self).__init__()
+        super(AutoEncoder_2D_MLP, self).__init__()
         
         # Encoder
         self.encoder = nn.Sequential(

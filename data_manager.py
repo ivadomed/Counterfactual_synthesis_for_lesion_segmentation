@@ -28,6 +28,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Define a custom dataset class
 class Auto_encoder_Dataset(Dataset):
+    "Used for training the autoencoder model. Requires the image and segmentation paths."
     def __init__(self, img_paths, seg_paths, transform=None):
         self.img_paths = img_paths
         self.seg_paths = seg_paths
@@ -65,6 +66,34 @@ class Auto_encoder_Dataset(Dataset):
         return img
 
 
+class Auto_encoder_Dataset_test(Dataset):
+    "Used for testing on any nii.gz file. Requires the image path only"
+    def __init__(self, img_paths, transform=None):
+        self.img_paths = img_paths
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.img_paths)
+
+    def __getitem__(self, idx):
+        img_path = self.img_paths[idx]
+
+        img = nib.load(img_path).get_fdata()
+        # detect the dimension with the lowest size
+        min_dim_size = np.min(img.shape)
+        min_dim = np.argmin(img.shape)
+        # select the middle slice
+        selected_slice = int(min_dim_size/2)
+        img = np.take(img, selected_slice, axis=min_dim)
+        # add a channel dimension
+        img = np.expand_dims(img, axis=0)
+        if self.transform:
+            img = self.transform(img)
+        
+        return img
+
+
+
 def fetch_all_T2w_paths(source_folder):
     img_paths = []
     seg_paths = []
@@ -95,31 +124,41 @@ def dataset_splitter(img_paths, seg_paths, train_ratio=0.8, random_seed=42):
     return pd_train_data, pd_val_data
 
 
-def paths_to_Dataset(pd_data, val = False):
-    """ Convert the file paths to a custom dataset object."""
-    if val:
+def paths_to_Dataset(pd_data, val = False, test = False):
+    """ Convert the file paths dataframe to a custom dataset object."""
+    if test:
         transform = Compose([
-        # select a random slice from the volume shaped : (32, 256, 256)
-        RandSpatialCrop(roi_size=(256, 256), random_center=True, random_size=False),
-        SpatialPad( spatial_size=(256, 256)),
-        ScaleIntensity(minv=0.0, maxv=1.0),
-        ToTensor(),
-    ])
-        
-    
-    else:
-        
-        transform = Compose([
-        # select a random slice from the volume shaped : (32, 256, 256)
-        RandSpatialCrop(roi_size=(256, 256), random_center=True, random_size=False),
-        SpatialPad( spatial_size=(256, 256)),
-        ScaleIntensity(minv=0.0, maxv=1.0),
-        RandRotate90(prob=0.5),
-        RandFlip(prob=0.5),
-        # normalise between 0 and 1
-        RandRotate(range_x=0.3, range_y=0.3, prob=0.2),
-        ToTensor(),
+            # select a random slice from the volume shaped : (32, 256, 256)
+            RandSpatialCrop(roi_size=(256, 256), random_center=True, random_size=False),
+            SpatialPad( spatial_size=(256, 256)),
+            ScaleIntensity(minv=0.0, maxv=1.0),
+            ToTensor(),
         ])
+        dataset = Auto_encoder_Dataset_test(pd_data["image_path"], transform=transform)
+    else:
+        if val:
+            transform = Compose([
+            # select a random slice from the volume shaped : (32, 256, 256)
+            RandSpatialCrop(roi_size=(256, 256), random_center=True, random_size=False),
+            SpatialPad( spatial_size=(256, 256)),
+            ScaleIntensity(minv=0.0, maxv=1.0),
+            ToTensor(),
+        ])
+            
         
-    dataset = Auto_encoder_Dataset(pd_data["image_path"], pd_data["segs"], transform=transform)
+        else:
+            
+            transform = Compose([
+            # select a random slice from the volume shaped : (32, 256, 256)
+            RandSpatialCrop(roi_size=(256, 256), random_center=True, random_size=False),
+            SpatialPad( spatial_size=(256, 256)),
+            ScaleIntensity(minv=0.0, maxv=1.0),
+            RandRotate90(prob=0.5),
+            RandFlip(prob=0.5),
+            # normalise between 0 and 1
+            RandRotate(range_x=0.3, range_y=0.3, prob=0.2),
+            ToTensor(),
+            ])
+            
+        dataset = Auto_encoder_Dataset(pd_data["image_path"], pd_data["segs"], transform=transform)
     return dataset
