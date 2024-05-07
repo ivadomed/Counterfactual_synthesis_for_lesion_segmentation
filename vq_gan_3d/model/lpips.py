@@ -25,7 +25,9 @@ MD5_MAP = {
 
 
 def download(url, local_path, chunk_size=1024):
+    #print("OK let's go" + local_path)
     os.makedirs(os.path.split(local_path)[0], exist_ok=True)
+    #print("OKOKOK Bonnardo")
     with requests.get(url, stream=True) as r:
         total_size = int(r.headers.get("content-length", 0))
         with tqdm(total=total_size, unit="B", unit_scale=True) as pbar:

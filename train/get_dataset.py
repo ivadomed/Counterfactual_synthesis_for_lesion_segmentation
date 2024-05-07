@@ -1,4 +1,4 @@
-from dataset import MRNetDataset, BRATSDataset, ADNIDataset, DUKEDataset, LIDCDataset, DEFAULTDataset, SpineGenericDataset
+from dataset import MRNetDataset, BRATSDataset, ADNIDataset, DUKEDataset, LIDCDataset, DEFAULTDataset
 from torch.utils.data import WeightedRandomSampler
 
 
@@ -43,12 +43,6 @@ def get_dataset(cfg):
         train_dataset = DEFAULTDataset(
             root_dir=cfg.dataset.root_dir)
         val_dataset = DEFAULTDataset(
-            root_dir=cfg.dataset.root_dir)
-        sampler = None
-    if cfg.dataset.name == 'SPINEGENERIC':
-        train_dataset = SPINEGENERICDataset(
-            root_dir=cfg.dataset.root_dir)
-        val_dataset = SPINEGENERICDataset(
             root_dir=cfg.dataset.root_dir)
         sampler = None
         return train_dataset, val_dataset, sampler

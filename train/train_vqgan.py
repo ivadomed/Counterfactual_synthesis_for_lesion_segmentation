@@ -1,4 +1,6 @@
 "Adapted from https://github.com/SongweiGe/TATS"
+import sys
+sys.path.append("/home/ge.polymtl.ca/p120530/Training/medif")
 
 import os
 import pytorch_lightning as pl
@@ -48,7 +50,7 @@ def run(cfg: DictConfig):
 
     # load the most recent checkpoint file
     base_dir = os.path.join(cfg.model.default_root_dir, 'lightning_logs')
-    if os.path.exists(base_dir):
+    if os.path.exists(base_dir):   
         log_folder = ckpt_file = ''
         version_id_used = step_used = 0
         for folder in os.listdir(base_dir):
@@ -72,9 +74,17 @@ def run(cfg: DictConfig):
     accelerator = None
     if cfg.model.gpus > 1:
         accelerator = 'ddp'
+    
+    exp_logger = pl.loggers.WandbLogger(
+                        name="preprocessed_central",
+                        save_dir='logger',
+                        group="test-on-spinegeneric",
+                        log_model=True, # save best model using checkpoint callback
+    )
 
     trainer = pl.Trainer(
         gpus=cfg.model.gpus,
+        logger=exp_logger,
         accumulate_grad_batches=cfg.model.accumulate_grad_batches,
         default_root_dir=cfg.model.default_root_dir,
         resume_from_checkpoint=cfg.model.resume_from_checkpoint,
@@ -85,8 +95,10 @@ def run(cfg: DictConfig):
         gradient_clip_val=cfg.model.gradient_clip_val,
         accelerator=accelerator,
     )
+    print('ookok le trainer est déclaré')
 
     trainer.fit(model, train_dataloader, val_dataloader)
+    print('fini de fit mamène')
 
 
 if __name__ == '__main__':

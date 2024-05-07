@@ -46,7 +46,9 @@ class ImageLogger(Callback):
                 current_epoch,
                 batch_idx)
             path = os.path.join(root, filename)
+            #print("let's go path " + path)
             os.makedirs(os.path.split(path)[0], exist_ok=True)
+            #print("OKOKOK Bonnardo")
             Image.fromarray(grid).save(path)
 
     def log_img(self, pl_module, batch, batch_idx, split="train"):

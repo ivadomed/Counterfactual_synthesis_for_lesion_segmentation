@@ -109,7 +109,6 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-medicaldiffusion_env/
 
 # Spyder project settings
 .spyderproject
@@ -153,12 +152,7 @@ cache/
 outputs/
 
 .vscode/
+commande.txt
 
 
-
-#Trash
-test_en_legende.ipynb
-
-#data
-data/
 
