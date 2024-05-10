@@ -974,6 +974,7 @@ class Trainer(object):
         update_ema_every=10,
         save_and_sample_every=1000,
         results_folder='./results',
+        #results_folder='/logger_ddpm',
         num_sample_rows=1,
         max_grad_norm=None,
         num_workers=20,
@@ -1043,6 +1044,7 @@ class Trainer(object):
             'ema': self.ema_model.state_dict(),
             'scaler': self.scaler.state_dict()
         }
+        print(f'saving model at step {self.step} in {self.results_folder}')
         torch.save(data, str(self.results_folder / f'model-{milestone}.pt'))
 
     def load(self, milestone, map_location=None, **kwargs):
@@ -1074,7 +1076,6 @@ class Trainer(object):
         while self.step < self.train_num_steps:
             for i in range(self.gradient_accumulate_every):
                 data = next(self.dl)['data'].cuda()
-
                 with autocast(enabled=self.amp):
                     loss = self.model(
                         data,
@@ -1139,7 +1140,6 @@ class Trainer(object):
                     plt.axis('off')
                     plt.imshow(frame[0], cmap='gray')
                     plt.savefig(path)
-
                 self.save(milestone)
 
             log_fn(log)

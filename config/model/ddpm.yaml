@@ -5,7 +5,7 @@ diffusion_img_size: ???
 diffusion_depth_size: ???
 diffusion_num_channels: ???
 dim_mults: ???
-results_folder: /data/home/firas/Desktop/work/other_groups/medicaldiffusion/checkpoints/ddpm/
+results_folder: ../logger_ddpm
 results_folder_postfix: ''
 load_milestone: False
 
@@ -19,7 +19,7 @@ train_lr: 1e-4
 timesteps: 300 # number of steps
 sampling_timesteps: 250 # number of sampling timesteps (using ddim for faster inference [see citation for ddim paper])
 loss_type: l1 # L1 or L2
-train_num_steps: 700000 # total training steps
+train_num_steps: 100000 # total training steps
 gradient_accumulate_every: 2 # gradient accumulation steps
 ema_decay: 0.995 # exponential moving average decay
 amp: False # turn on mixed precision

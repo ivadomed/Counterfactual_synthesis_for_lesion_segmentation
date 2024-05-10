@@ -8,11 +8,14 @@ from pathlib import Path
 
 PREPROCESSING_TRANSORMS = tio.Compose([
     tio.RescaleIntensity(out_min_max=(-1, 1)),
-    tio.CropOrPad(target_shape=(256, 256, 16))
+
+    # change here to the desired shape (/!\ must be powers of 2, GPU memory consuption is proportional to the size of the image)
+    tio.CropOrPad(target_shape=(16, 256, 256))
 ])
 
 TRAIN_TRANSFORMS = tio.Compose([
-    tio.RandomFlip(axes=(1), flip_probability=0.5),
+    # add any data desired data aumgentation transforms here and 
+    tio.RandomFlip(axes=(1), flip_probability=0.0),
 ])
 
 
@@ -38,7 +41,6 @@ class DEFAULTDataset(Dataset):
 
     def __getitem__(self, idx: int): 
         img = tio.ScalarImage(self.file_paths[idx])
-        img = img.data.permute((0, 3, 1, 2))
         img = self.preprocessing(img)
-        #img = self.transforms(img)
-        return {'data': img.data.permute(0, -1, 1, 2)}
+        img = self.transforms(img)
+        return {'data': img.data}

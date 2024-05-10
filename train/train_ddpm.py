@@ -1,3 +1,8 @@
+# add the main folder to the path so the modules can be imported without errors
+import os
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
 from re import I
 from ddpm import Unet3D, GaussianDiffusion, Trainer
 from dataset import MRNetDataset, BRATSDataset
@@ -9,6 +14,7 @@ from train.get_dataset import get_dataset
 import torch
 import os
 from ddpm.unet import UNet
+import pytorch_lightning as pl
 
 
 # NCCL_P2P_DISABLE=1 accelerate launch train/train_ddpm.py
@@ -16,9 +22,6 @@ from ddpm.unet import UNet
 @hydra.main(config_path='../config', config_name='base_cfg', version_base=None)
 def run(cfg: DictConfig):
     torch.cuda.set_device(cfg.model.gpus)
-    with open_dict(cfg):
-        cfg.model.results_folder = os.path.join(
-            cfg.model.results_folder, cfg.dataset.name, cfg.model.results_folder_postfix)
 
     if cfg.model.denoising_fn == 'Unet3D':
         model = Unet3D(
@@ -34,6 +37,8 @@ def run(cfg: DictConfig):
         ).cuda()
     else:
         raise ValueError(f"Model {cfg.model.denoising_fn} doesn't exist")
+    
+
 
     diffusion = GaussianDiffusion(
         model,
