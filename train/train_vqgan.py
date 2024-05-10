@@ -77,16 +77,9 @@ def run(cfg: DictConfig):
     if cfg.model.gpus > 1:
         accelerator = 'ddp'
     
-    exp_logger = pl.loggers.WandbLogger(
-                        name="training_name",
-                        save_dir=cfg.model.default_root_dir,
-                        group="group_name",
-                        log_model=True, # save best model using checkpoint callback
-    )
 
     trainer = pl.Trainer(
         gpus=cfg.model.gpus,
-        logger=exp_logger,
         accumulate_grad_batches=cfg.model.accumulate_grad_batches,
         default_root_dir=cfg.model.default_root_dir,
         resume_from_checkpoint=cfg.model.resume_from_checkpoint,
