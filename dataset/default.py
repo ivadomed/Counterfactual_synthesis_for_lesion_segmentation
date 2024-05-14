@@ -56,5 +56,5 @@ class DEFAULTDataset(Dataset):
     def __getitem__(self, idx: int): 
         img = tio.ScalarImage(self.file_paths[idx])
         img = self.preprocessing(img)
-        img = self.transforms(img)
-        return {'data': img}
+        img.data = self.transforms(img.data)
+        return {'data': img.data}
