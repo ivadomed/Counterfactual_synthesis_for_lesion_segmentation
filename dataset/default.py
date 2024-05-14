@@ -20,7 +20,6 @@ PREPROCESSING_TRANSORMS = tio.Compose([
 ])
 
 TRAIN_VQGAN_TRANSFORMS = Compose([
-    RandSpatialCrop((32, 128, 128), random_size=False, random_center=True),
     RandShiftIntensity(offsets=0.1, prob=0.5),
     RandRotate(range_x=0.3, range_y=0.3, range_z=0.3, prob=0.5),
 ])
@@ -58,4 +57,4 @@ class DEFAULTDataset(Dataset):
         img = tio.ScalarImage(self.file_paths[idx])
         img = self.preprocessing(img)
         img = self.transforms(img)
-        return {'data': img.data}
+        return {'data': img}
