@@ -5,7 +5,7 @@ diffusion_img_size: ???
 diffusion_depth_size: ???
 diffusion_num_channels: ???
 dim_mults: ???
-results_folder: logger_ddpm
+results_folder: ???
 results_folder_postfix: ''
 load_milestone: False
 

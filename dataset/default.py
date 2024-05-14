@@ -20,6 +20,7 @@ PREPROCESSING_TRANSORMS = tio.Compose([
 ])
 
 TRAIN_VQGAN_TRANSFORMS = Compose([
+    RandSpatialCrop((8, 256, 256), random_size=False),
     RandShiftIntensity(offsets=0.1, prob=0.5),
     RandRotate(range_x=0.3, range_y=0.3, range_z=0.3, prob=0.5),
 ])
