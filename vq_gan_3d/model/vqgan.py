@@ -87,6 +87,8 @@ class VQGAN(pl.LightningModule):
         self.l1_weight = cfg.model.l1_weight
         self.save_hyperparameters()
 
+        self.decoding_diviser = cfg.model.decoding_diviser
+
     def encode(self, x, include_embeddings=False, quantize=True):
         h = self.pre_vq_conv(self.encoder(x))
         if quantize:
@@ -97,13 +99,23 @@ class VQGAN(pl.LightningModule):
                 return vq_output['encodings']
         return h
 
-    def decode(self, latent, quantize=False):
-        if quantize:
-            vq_output = self.codebook(latent)
-            latent = vq_output['encodings']
-        h = F.embedding(latent, self.codebook.embeddings)
-        h = self.post_vq_conv(shift_dim(h, -1, 1))
-        return self.decoder(h)
+    def decode(self, latent, quantize=True):
+        num_parts = self.decoding_diviser  # Set the desired number of parts
+        part_size = latent.shape[2] // num_parts
+        decoded_parts = []
+        for i in range(num_parts):
+            start_idx = i * part_size
+            end_idx = (i + 1) * part_size
+            latent_part = latent[:, :, start_idx:end_idx, :, :]
+            if quantize:
+                vq_output = self.codebook(latent_part)
+                latent_part = vq_output['encodings']
+            h = F.embedding(latent_part, self.codebook.embeddings)
+            h = self.post_vq_conv(shift_dim(h, -1, 1))
+            decoded_part = self.decoder(h)
+            decoded_parts.append(decoded_part)
+        decoded = torch.cat(decoded_parts, 2)
+        return decoded
 
     def forward(self, x, optimizer_idx=None, log_image=False):
         B, C, T, H, W = x.shape

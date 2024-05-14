@@ -34,4 +34,7 @@ norm_type: group
 padding_type: replicate
 num_groups: 32
 
+# in how many steps does the decoder will run in order to save VRAM
+decoding_diviser: 4
+
 
