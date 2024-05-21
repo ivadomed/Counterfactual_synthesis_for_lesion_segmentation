@@ -98,14 +98,34 @@ class VQGAN(pl.LightningModule):
             else:
                 return vq_output['encodings']
         return h
+    
+    def reverse_order(self, img, axis):
+        index = [slice(None)] * img.ndim
+        index[axis] = slice(None, None, -1)
+        return img[tuple(index)]
+    
+    def merge_images(self, img1, img2):
+        assert img1.shape[1:] == img2.shape[1:], "Images must have the same shape across Y and Z axis"
+
+        fade_length = img2.shape[0] // 2
+        fade = np.ones((fade_length,) + img1.shape[1:]) - np.linspace(0, 1, fade_length)[:, None, None]
+        print(fade.shape)
+
+        faded_img1 = img1[-fade_length:] * (1 - fade[-fade_length:])
+        faded_img2 = img2[:fade_length] * fade[:fade_length]
+        print(faded_img1.shape, faded_img2.shape)
+
+        merged = np.concatenate([img1[:-fade_length], self.reverse_order(faded_img1 + faded_img2,0), img2[fade_length:]], axis=0)
+        print(merged.shape)
+
+        return merged
 
     def decode(self, latent, quantize=True):
         num_parts = self.decoding_diviser  # Set the desired number of parts
         part_size = latent.shape[2] // num_parts
-        decoded_parts = []
         for i in range(num_parts):
             start_idx = i * part_size
-            end_idx = (i + 1) * part_size
+            end_idx = (i + 2) * part_size
             latent_part = latent[:, :, start_idx:end_idx, :, :]
             if quantize:
                 vq_output = self.codebook(latent_part)
@@ -113,8 +133,12 @@ class VQGAN(pl.LightningModule):
             h = F.embedding(latent_part, self.codebook.embeddings)
             h = self.post_vq_conv(shift_dim(h, -1, 1))
             decoded_part = self.decoder(h)
-            decoded_parts.append(decoded_part)
-        decoded = torch.cat(decoded_parts, 2)
+            if i == 0:
+                decoded = decoded_part
+            else:
+                decoded = self.merge_images(decoded, decoded_part)
+
+
         return decoded
 
     def forward(self, x, optimizer_idx=None, log_image=False):
