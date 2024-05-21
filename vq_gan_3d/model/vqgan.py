@@ -105,17 +105,18 @@ class VQGAN(pl.LightningModule):
         return img[tuple(index)]
     
     def merge_images(self, img1, img2):
-        assert img1.shape[1:] == img2.shape[1:], "Images must have the same shape across Y and Z axis"
+        # concatenate the images with a fade effect
+        assert img1.shape[2:] == img2.shape[2:], "Images must have the same shape across X, Y and Z axis"
 
-        fade_length = img2.shape[0] // 2
-        fade = np.ones((fade_length,) + img1.shape[1:]) - np.linspace(0, 1, fade_length)[:, None, None]
+        fade_length = img2.shape[2] // 2
+        fade = np.ones((img2.shape[0], img2.shape[1], fade_length) + img1.shape[3:]) - np.linspace(0, 1, fade_length)[None, None, :, None, None]
         print(fade.shape)
 
-        faded_img1 = img1[-fade_length:] * (1 - fade[-fade_length:])
-        faded_img2 = img2[:fade_length] * fade[:fade_length]
+        faded_img1 = img1[:, :, -fade_length:] * (1 - fade[:, :, -fade_length:])
+        faded_img2 = img2[:, :, :fade_length] * fade[:, :, :fade_length]
         print(faded_img1.shape, faded_img2.shape)
 
-        merged = np.concatenate([img1[:-fade_length], self.reverse_order(faded_img1 + faded_img2,0), img2[fade_length:]], axis=0)
+        merged = np.concatenate([img1[:, :, :-fade_length], self.reverse_order(faded_img1 + faded_img2, 2), img2[:, :, fade_length:]], axis=2)
         print(merged.shape)
 
         return merged
@@ -133,12 +134,15 @@ class VQGAN(pl.LightningModule):
             h = F.embedding(latent_part, self.codebook.embeddings)
             h = self.post_vq_conv(shift_dim(h, -1, 1))
             decoded_part = self.decoder(h)
+            # convert to numpy
+            decoded_part_np = decoded_part.detach().cpu().numpy()
+            del h, latent_part, decoded_part
             if i == 0:
-                decoded = decoded_part
+                decoded = decoded_part_np
             else:
-                decoded = self.merge_images(decoded, decoded_part)
-
-
+                decoded = self.merge_images(decoded, decoded_part_np)
+        # decoded back to torch
+        decoded = torch.from_numpy(decoded).to(self.device)
         return decoded
 
     def forward(self, x, optimizer_idx=None, log_image=False):
