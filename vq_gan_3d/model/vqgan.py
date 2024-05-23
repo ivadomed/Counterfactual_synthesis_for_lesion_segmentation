@@ -100,29 +100,35 @@ class VQGAN(pl.LightningModule):
         return h
     
     def merge_images(self, img1, img2):
-        assert img1.shape[2:] == img2.shape[2:], "Images must have the same shape across Y and Z axis"
+        """
+        Merge two images by fading the last part of the first image and the first half of the second image
+        """
+        assert img1.shape[3:] == img2.shape[3:], "Images must have the same shape across Y and Z axis"
 
-        fade_length = img2.shape[1] // 2
+        fade_length = img2.shape[2] // 2
         fade_factor = np.linspace(0, 1, fade_length)
-        fade_factor = np.tile(fade_factor, (img2.shape[0], 1))
-        fade_factor = [fade_factor] * img2.shape[2]
+        fade_factor = [fade_factor] * img2.shape[1]
+        fade_factor = [fade_factor] * img2.shape[0]
         fade_factor = [fade_factor] * img2.shape[3]
+        fade_factor = [fade_factor] * img2.shape[4]  
         fade_factor = np.array(fade_factor)
-        fade_factor = np.transpose(fade_factor, (2,3,1,0))
+        fade_factor = np.transpose(fade_factor, (2,3,4,1,0))
 
-        fade1 = img1[:, -fade_length:, :, :] * (1-fade_factor)
-        fade2 = img2[:, :fade_length, :, :] * fade_factor
+
+        fade1 = img1[:,:, -fade_length:, :, :] * (1-fade_factor)
+        fade2 = img2[:,:, :fade_length, :, :] * fade_factor
 
         fade = fade1 + fade2
-        merged = np.concatenate((img1[:, :-fade_length, :, :], fade, img2[:, fade_length:, :, :]), axis=1)
+        merged = np.concatenate((img1[:,:, :-fade_length, :, :], fade, img2[:,:, fade_length:, :, :]), axis=2)
+
         return merged
 
     def decode(self, latent, quantize=True):
         num_parts = self.decoding_diviser  # Set the desired number of parts
-        part_size = latent.shape[2] // num_parts
+        part_size = latent.shape[2] // ( num_parts - 1 )
         for i in range(num_parts):
-            start_idx = i * part_size
-            end_idx = (i + 2) * part_size
+            start_idx = i * (part_size//2)
+            end_idx = (i + 2) * (part_size//2)
             latent_part = latent[:, :, start_idx:end_idx, :, :]
             if quantize:
                 vq_output = self.codebook(latent_part)
