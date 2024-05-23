@@ -99,26 +99,22 @@ class VQGAN(pl.LightningModule):
                 return vq_output['encodings']
         return h
     
-    def reverse_order(self, img, axis):
-        index = [slice(None)] * img.ndim
-        index[axis] = slice(None, None, -1)
-        return img[tuple(index)]
-    
     def merge_images(self, img1, img2):
-        # concatenate the images with a fade effect
-        assert img1.shape[2:] == img2.shape[2:], "Images must have the same shape across X, Y and Z axis"
+        assert img1.shape[2:] == img2.shape[2:], "Images must have the same shape across Y and Z axis"
 
-        fade_length = img2.shape[2] // 2
-        fade = np.ones((img2.shape[0], img2.shape[1], fade_length) + img1.shape[3:]) - np.linspace(0, 1, fade_length)[None, None, :, None, None]
-        print(fade.shape)
+        fade_length = img2.shape[1] // 2
+        fade_factor = np.linspace(0, 1, fade_length)
+        fade_factor = np.tile(fade_factor, (img2.shape[0], 1))
+        fade_factor = [fade_factor] * img2.shape[2]
+        fade_factor = [fade_factor] * img2.shape[3]
+        fade_factor = np.array(fade_factor)
+        fade_factor = np.transpose(fade_factor, (2,3,1,0))
 
-        faded_img1 = img1[:, :, -fade_length:] * (1 - fade[:, :, -fade_length:])
-        faded_img2 = img2[:, :, :fade_length] * fade[:, :, :fade_length]
-        print(faded_img1.shape, faded_img2.shape)
+        fade1 = img1[:, -fade_length:, :, :] * (1-fade_factor)
+        fade2 = img2[:, :fade_length, :, :] * fade_factor
 
-        merged = np.concatenate([img1[:, :, :-fade_length], self.reverse_order(faded_img1 + faded_img2, 2), img2[:, :, fade_length:]], axis=2)
-        print(merged.shape)
-
+        fade = fade1 + fade2
+        merged = np.concatenate((img1[:, :-fade_length, :, :], fade, img2[:, fade_length:, :, :]), axis=1)
         return merged
 
     def decode(self, latent, quantize=True):
