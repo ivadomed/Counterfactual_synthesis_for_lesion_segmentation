@@ -117,26 +117,42 @@ class VQGAN(pl.LightningModule):
         return merged
 
     def decode(self, latent, quantize=True):
+        """
+        Decode a latent tensor into an image. As this step bottleneck the memory, we decode the image in parts and merge them with a fade".
+        """
+
         num_parts = self.decoding_diviser  # Set the desired number of parts
-        part_size = latent.shape[2] // ( num_parts - 1 )
+        assert num_parts > 0, "Number of parts must be greater than 0"
+        assert num_parts % 2 == 1, "Number of parts must be odd"
+
+        if num_parts == 1:
+            part_size = latent.shape[2] # in this case, their is no fade
+        else:
+            part_size = latent.shape[2] // ( num_parts - 1 )
+        
+
         for i in range(num_parts):
+            # Get the appropriate part of the image in the latent space
             start_idx = i * (part_size//2)
             end_idx = (i + 2) * (part_size//2)
             latent_part = latent[:, :, start_idx:end_idx, :, :]
+
+            # Decode the part
             if quantize:
                 vq_output = self.codebook(latent_part)
                 latent_part = vq_output['encodings']
             h = F.embedding(latent_part, self.codebook.embeddings)
             h = self.post_vq_conv(shift_dim(h, -1, 1))
             decoded_part = self.decoder(h)
-            # convert to numpy
+
+            # merge the decoded part
             decoded_part_np = decoded_part.detach().cpu().numpy()
             del h, latent_part, decoded_part
             if i == 0:
                 decoded = decoded_part_np
             else:
                 decoded = self.merge_images(decoded, decoded_part_np)
-        # decoded back to torch
+
         decoded = torch.from_numpy(decoded).to(self.device)
         return decoded
 
