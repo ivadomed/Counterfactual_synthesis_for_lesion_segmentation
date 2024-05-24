@@ -795,7 +795,6 @@ class GaussianDiffusion(nn.Module):
         t_max = int(denoising * self.num_timesteps)
 
         for t in tqdm(reversed(range(0, t_max)), desc='sampling loop time step', total=self.num_timesteps):
-            print(t)
             img = self.p_sample(img, torch.full(
                 (b,), t, device=device, dtype=torch.long), cond=cond, cond_scale=cond_scale)
 
