@@ -1,7 +1,10 @@
 # Medical Diffusion
 
-This repository contains the code to our paper "Medical Diffusion: Denoising Diffusion Probabilistic Models for 3D Medical Image Synthesis"
-(see https://arxiv.org/abs/2211.03364).
+This branch is extensively based on [Medical Diffusion](https://github.com/FirasGit/medicaldiffusion). Only few changes have been done in order facilitate training on any dataset and optimizing memory usage. The running command now also suggests to set-up the output folder in order to avoid any access permission problem.
+
+The rest of the 'readme' is largely based on the content of the 'readme' in the [original repo](https://github.com/FirasGit/medicaldiffusion)
+
+Original paper : ["Medical Diffusion: Denoising Diffusion Probabilistic Models for 3D Medical Image Synthesis"](https://arxiv.org/abs/2211.03364).
 
 ![Generated Samples by our Medical Diffusion model](assets/generated_samples.gif)
 
