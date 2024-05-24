@@ -1,6 +1,6 @@
 # Medical Diffusion
 
-This branch is extensively based on [Medical Diffusion](https://github.com/FirasGit/medicaldiffusion). Only few changes have been done in order facilitate training on any dataset and optimizing memory usage. The running command now also suggests to set-up the output folder in order to avoid any access permission problem.
+This branch is extensively based on [Medical Diffusion](https://github.com/FirasGit/medicaldiffusion). Only few changes have been done in order to facilitate training on any dataset and optimizing memory usage. The running command now also suggests to set-up the output folder in order to avoid any access permission problem.
 
 The rest of the 'readme' is largely based on the content of the 'readme' in the [original repo](https://github.com/FirasGit/medicaldiffusion)
 
@@ -62,7 +62,7 @@ Note that since "max_epochs" is set to '-1' in "config/model/vq_gan_3D.yaml", th
 
 To train the diffusion model in the latent space of the previously trained VQ-GAN model, you need to run the following command
 ```
-python train/train_ddpm.py model=ddpm dataset=default dataset.root_dir=<INSERT_PATH_TO_ROOT_DIRECTORY> model.results_folder=<INSERT_PATH_TO_THE_DESIRED_RESULT_FOLDER> model.results_folder_postfix='own_dataset' model.vqgan_ckpt=<INSERT_PATH_TO_CHECKPOINT> model.diffusion_img_size=128 model.diffusion_depth_size=8 model.diffusion_num_channels=8 model.dim_mults=[1,2,4,8] model.batch_size=2 model.gpus=1
+python train/train_ddpm.py model=ddpm dataset=default dataset.root_dir=<INSERT_PATH_TO_ROOT_DIRECTORY> model.results_folder=<INSERT_PATH_TO_THE_DESIRED_RESULT_FOLDER> model.results_folder_postfix='own_dataset' model.vqgan_ckpt=<INSERT_PATH_TO_CHECKPOINT> model.diffusion_img_size=128 model.diffusion_depth_size=8 model.diffusion_num_channels=8 model.dim_mults=[1,2,4,8] model.batch_size=1 model.gpus=1
 ```
 Where you again need to specify the path to the VQ-GAN checkpoint from before (e.g. ```model.vqgan_ckpt='/home/<user>/Desktop/medicaldiffusion/checkpoints/vq_gan/DEFAULT/own_dataset/lightning_logs/version_0/checkpoints/latest_checkpoint.ckpt'```)
 
