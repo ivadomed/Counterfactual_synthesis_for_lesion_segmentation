@@ -60,6 +60,23 @@ def shift_dim(x, src_dim=-1, dest_dim=-1, make_contiguous=True):
         x = x.contiguous()
     return x
 
+def merge_images(self, img1, img2):
+        """
+        Merge two images by fading the last part of the first image and the first half of the second image
+        """
+        assert img1.shape[3:] == img2.shape[3:], "Images must have the same shape across Y and Z axis"
+
+        fade_length = img2.shape[2] // 2
+        fade_factor = np.linspace(0, 1, fade_length)[np.newaxis, np.newaxis, :, np.newaxis, np.newaxis]
+
+        fade1 = img1[:, :, -fade_length:, :, :] * (1 - fade_factor)
+        fade2 = img2[:, :, :fade_length, :, :] * fade_factor
+
+        fade = fade1 + fade2
+        merged = np.concatenate((img1[:, :, :-fade_length, :, :], fade, img2[:, :, fade_length:, :, :]), axis=2)
+
+        return merged
+
 
 # reshapes tensor start from dim i (inclusive)
 # to dim j (exclusive) to the desired shape

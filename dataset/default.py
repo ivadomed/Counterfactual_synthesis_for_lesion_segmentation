@@ -19,12 +19,14 @@ PREPROCESSING_TRANSORMS = tio.Compose([
     tio.CropOrPad(target_shape=(32, 256, 256))
 ])
 
+# Since the training of the VQGAN is more memory intensive, one shall want to use smaller images
 TRAIN_VQGAN_TRANSFORMS = Compose([
     RandSpatialCrop((16, 256, 256), random_size=False),
     RandShiftIntensity(offsets=0.1, prob=0.5),
     RandRotate(range_x=0.3, range_y=0.3, range_z=0.3, prob=0.5),
 ])
 
+# For the DDPM training, we can use larger images since the decoding can be devided in several patches
 TRAIN_DDPM_TRANSFORMS = Compose([
     RandShiftIntensity(offsets=0.1, prob=0.5),
     RandRotate(range_x=0.3, range_y=0.3, range_z=0.3, prob=0.5),
