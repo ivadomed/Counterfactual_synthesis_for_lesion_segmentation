@@ -41,7 +41,33 @@ python train/train_ddpm.py model=ddpm dataset=brats model.results_folder_postfix
 ```
 Where you again need to specify the path to the VQ-GAN checkpoint from before (e.g. ```model.vqgan_ckpt='/home/<user>/Desktop/medicaldiffusion/checkpoints/vq_gan/BRATS/flair/lightning_logs/version_0/checkpoints/latest_checkpoint.ckpt'```)
 
-# Train on your own dataset
+# Train on a BIDS dataset
+If you have a dataset that follow the [BIDS](https://bids.neuroimaging.io/) standard, you can use the BIDSDataset class to load your data. It will automatically select all the nifti files in the "sub-##" with the given contrasts.         
+
+The file "dataset/bids.py" can be modified to manage image shape and data augmentation transforms
+
+All you need to do now is just specify the path to this root directory the way we have dealt with it before, i.e.,
+
+```
+PL_TORCH_DISTRIBUTED_BACKEND=gloo python train/train_vqgan.py dataset=bids dataset.root_dir=<INSERT_PATH_TO_ROOT_DIRECTORY> dataset.is_VQGAN=True dataset.contrast=["T2w","T1w"] model=vq_gan_3d model.default_root_dir=<INSERT_PATH_TO_THE_DESIRED_RESULT_FOLDER> model.gpus=1 model.default_root_dir_postfix='own_dataset' model.precision=16 model.embedding_dim=8 model.n_hiddens=16 model.downsample=[2,2,2] model.num_workers=32 model.gradient_clip_val=1.0 model.lr=3e-4 model.discriminator_iter_start=10000 model.perceptual_weight=4 model.image_gan_weight=1 model.video_gan_weight=1 model.gan_feat_weight=4 model.batch_size=1 model.n_codes=16384 model.accumulate_grad_batches=1 model.decoding_diviser=1
+```
+
+Note that since "max_epochs" is set to '-1' in "config/model/vq_gan_3D.yaml", the training will go forever unless it's manually stopped. Considerer modifying the config file if you don't want this behaviour.
+
+To train the diffusion model in the latent space of the previously trained VQ-GAN model, you need to run the following command
+```
+python train/train_ddpm.py model=ddpm dataset=bids dataset.root_dir=<INSERT_PATH_TO_ROOT_DIRECTORY> dataset.contrast=["T2w","T1w"] model.results_folder=<INSERT_PATH_TO_THE_DESIRED_RESULT_FOLDER> model.results_folder_postfix='own_dataset' model.vqgan_ckpt=<INSERT_PATH_TO_CHECKPOINT> model.diffusion_img_size=128 model.diffusion_depth_size=8 model.diffusion_num_channels=8 model.dim_mults=[1,2,4,8] model.batch_size=1 model.gpus=1
+```
+Where you again need to specify the path to the VQ-GAN checkpoint from before (e.g. ```model.vqgan_ckpt='/home/<user>/Desktop/medicaldiffusion/checkpoints/vq_gan/DEFAULT/own_dataset/lightning_logs/version_0/checkpoints/latest_checkpoint.ckpt'```)
+
+You should as well make sure to specify the shape you wich to center crop/pad your images with : (2 * diffusion_depth_size,2 * model.diffusion_img_size, 2 * model.diffusion_img_size)
+
+Note that you need to provide the path to the dataset (e.g. ```dataset.root_dir='/../../root_dir/'```) to successfully run the command.
+
+Note that you can use multiple GPUs with model.gpus=nb_of_desired_GPUS as long as allowed be availability.
+
+
+# Train on an un-formated dataset
 To simpify the dataloading for your own dataset, we provide a default dataset that simply requires the path to the folder with your NifTI images inside, i.e.
 
     root_dir/					# Path to the folder that contains the images
