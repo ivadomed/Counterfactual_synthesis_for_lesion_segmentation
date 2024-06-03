@@ -1,0 +1,5 @@
+name: BIDS
+root_dir: ???
+image_channels: 1
+is_VQGAN: False
+contrasts: ['T2w']

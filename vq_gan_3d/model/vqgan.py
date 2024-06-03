@@ -104,7 +104,6 @@ class VQGAN(pl.LightningModule):
         """
         Decode a latent tensor into an image. As this step bottleneck the memory, we decode the image in parts and merge them with a fade".
         """
-
         num_parts = self.decoding_diviser  # Set the desired number of parts
         assert num_parts > 0, "Number of parts must be greater than 0"
         assert num_parts % 2 == 1, "Number of parts must be odd"
