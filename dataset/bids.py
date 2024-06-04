@@ -29,37 +29,65 @@ import time
 
 
 class BIDSDataset(Dataset):
-    def __init__(self, root_dir: str, is_VQGAN: bool = False, contrasts = None, derivatives = False):
+    def __init__(self, root_dir: str, is_VQGAN: bool = False, contrasts = [], derivatives: bool = False):
         super().__init__()
         self.root_dir = root_dir
+
+        # If is_VQGAN is set to True, the dataset will use the VQGAN training pipeline
         self.is_VQGAN = is_VQGAN
+
+        # The list of contrasts to filter the files, if empty, it will take all contrasts
         self.contrasts = contrasts
+
+        # If derivatives is set to True, the dataset will look for the derivatives in the derivatives folder
         self.derivatives = derivatives
-        self.derivatives_dicts = []
+
+        # Encapssulate a list of dictionnaries with the derivative name as key and the path as value
+        self.derivatives_paths = []
         self.file_paths = self.get_data_files()
+    
+    def find_derivatives(self):
+        """
+        This function will look for the derivatives in the derivatives folder.
+        It will return a dictionnary with the original file name as key and a list of dictionnaries with the derivative name as key and the path as value
+        (finding derivatives first ensure to browse the derivatives folder only once and speeds up the derivative linking)
+        """
+        derivatives_files_paths = {}
+        for root_deriv, dirs_deriv, files_deriv in os.walk(self.root_dir+'/derivatives'):
+            for file_deriv in files_deriv:
+                if file_deriv.endswith('.nii.gz'):
+                    derivative_key = file_deriv.split('_')[-1].split('.')[0]
+                    file_path = file_deriv.split('_'+derivative_key)[0]+'.nii.gz'
+                    if file_path in derivatives_files_paths:
+                        derivatives_files_paths[file_path].append({'derivative_key':derivative_key, 'derivate_path':os.path.join(root_deriv, file_deriv)})
+                    else:
+                        derivatives_files_paths[file_path] = [{'derivative_key':derivative_key, 'derivate_path':os.path.join(root_deriv, file_deriv)}]
+        return derivatives_files_paths
         
     
-    def find_derivatives(self, file, derivatives_files_paths):
-        self.derivatives_dicts.append({})
+    def link_derivatives(self, file, derivatives_files_paths):
+        """
+        This function uses the dictionnary of derivatives done by "find_derivatives"
+        in order to add the derivatives information to the self.derivatives_paths list
+        which allow using an index instead of a file name to get the derivatives
+        """
+        self.derivatives_paths.append({})
         if file in derivatives_files_paths:
             for derivative_dict in derivatives_files_paths[file]:
                 derivative_key = derivative_dict['derivative_key']
                 derivative_path = derivative_dict['derivate_path']
-                self.derivatives_dicts[-1][derivative_key] = derivative_path
+                self.derivatives_paths[-1][derivative_key] = derivative_path
+    
 
     def get_data_files(self):
+        """
+        Browse the root_dir to find the .nii.gz files in the sub-## folders with the correct contrasts
+        link the derivatives if the derivatives argument is set to True
+        """
         files_paths = []
         if self.derivatives:
-            derivatives_files_paths = {}
-            for root_deriv, dirs_deriv, files_deriv in os.walk(self.root_dir+'/derivatives'):
-                for file_deriv in files_deriv:
-                    if file_deriv.endswith('.nii.gz'):
-                        derivative_key = file_deriv.split('_')[-1].split('.')[0]
-                        file_path = file_deriv.split('_'+derivative_key)[0]+'.nii.gz'
-                        if file_path in derivatives_files_paths:
-                            derivatives_files_paths[file_path].append({'derivative_key':derivative_key, 'derivate_path':os.path.join(root_deriv, file_deriv)})
-                        else:
-                            derivatives_files_paths[file_path] = [{'derivative_key':derivative_key, 'derivate_path':os.path.join(root_deriv, file_deriv)}]
+            derivatives_files_paths = self.find_derivatives()
+
         for root, dirs, files in os.walk(self.root_dir):
             if self.root_dir +'/sub-' in root or self.root_dir +'\\sub-' in root:
                 for file in files:
@@ -69,20 +97,24 @@ class BIDSDataset(Dataset):
                                 if contrast in file:
                                     files_paths.append(os.path.join(root, file))
                                     if self.derivatives:
-                                        self.find_derivatives(file, derivatives_files_paths)
+                                        self.link_derivatives(file, derivatives_files_paths)
                         else:
                             files_paths.append(os.path.join(root, file))
                             if self.derivatives:
-                                self.find_derivatives(file, derivatives_files_paths)
+                                self.link_derivatives(file, derivatives_files_paths)
 
         print(f'Found {len(files_paths)} files in {self.root_dir}')
         return files_paths
     
     def get_sample_dict(self, idx: int):
+        """
+        This function returns a dictionnary with the paths of the main image on the "data" key
+        and the derivatives path on the derivatives names keys
+        """
         sample_dict = {}
         sample_dict['data'] = self.file_paths[idx]
         if self.derivatives:
-            sample_dict.update(self.derivatives_dicts[idx])
+            sample_dict.update(self.derivatives_paths[idx])
         return sample_dict
     
     
@@ -90,10 +122,12 @@ class BIDSDataset(Dataset):
         return len(self.file_paths)
 
     def __getitem__(self, idx: int):
-        sample_dict = self.get_sample_dict(idx)
-        keys = list(sample_dict.keys())
+        sample_paths = self.get_sample_dict(idx)
+        keys = list(sample_paths.keys())
 
-        img = LoadImage()(sample_dict['data'])
+        # Load the image to get the min and max values so it can be and normalized between -1 and 1 then 
+        # => (probably not the best way, feel free to suggest a better one)
+        img = LoadImage()(sample_paths['data'])
         img_np = img.numpy()
         a_min = img_np.min().astype(float)
         a_max = img_np.max().astype(float)
@@ -126,8 +160,8 @@ class BIDSDataset(Dataset):
 
 
         if self.is_VQGAN:
-            sample_dict = TRAIN_VQGAN_TRANSORMS(sample_dict)
+            sample_tensors = TRAIN_VQGAN_TRANSORMS(sample_paths)
         else:
-            sample_dict = TRAIN_DDPM_TRANSFORMS(sample_dict)
+            sample_tensors = TRAIN_DDPM_TRANSFORMS(sample_paths)
         
-        return sample_dict
+        return sample_tensors
