@@ -47,6 +47,9 @@ def get_dataset(cfg):
         sampler = None
         return train_dataset, val_dataset, sampler
     if cfg.dataset.name == 'BIDS':
+        print('bjr')
+        print(cfg.dataset.derivatives)
+        print(cfg.dataset.contrasts)
         train_dataset = BIDSDataset(
             root_dir=cfg.dataset.root_dir, is_VQGAN=cfg.dataset.is_VQGAN, contrasts=cfg.dataset.contrasts, derivatives=cfg.dataset.derivatives)
         val_dataset = BIDSDataset(
