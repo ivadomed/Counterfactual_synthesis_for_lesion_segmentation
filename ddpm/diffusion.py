@@ -779,7 +779,7 @@ class GaussianDiffusion(nn.Module):
 
         b = shape[0]
         # if not input image is provided, generate a random one
-        if input_image is None:
+        if input_image is None or denoising == 1:
             img = torch.randn(shape, device=device)
         else:
             # otherwise, use the input image
@@ -793,12 +793,57 @@ class GaussianDiffusion(nn.Module):
         
          # Get the time step corresponding to the noise level
         t_max = int(denoising * self.num_timesteps)
+        print(t_max)
 
         for t in tqdm(reversed(range(0, t_max)), desc='sampling loop time step', total=self.num_timesteps):
             img = self.p_sample(img, torch.full(
                 (b,), t, device=device, dtype=torch.long), cond=cond, cond_scale=cond_scale)
 
         return img
+    
+    @torch.inference_mode()
+    def noise_sample(self, cond=None, cond_scale=1., batch_size=16, input_image=None, denoising = 1):
+        """
+        Noise an input image to a specific time step (monitored by the denoising parameter)
+        For visualisation purposes only :
+        Return it without performing the diffusion process.
+        """
+        device = next(self.denoise_fn.parameters()).device
+
+        if is_list_str(cond):
+            cond = bert_embed(tokenize(cond)).to(device)
+
+        batch_size = cond.shape[0] if exists(cond) else batch_size
+        image_size = self.image_size
+        channels = self.channels
+        num_frames = self.num_frames
+
+        shape = (batch_size, channels, num_frames, image_size, image_size)
+        b = shape[0]
+        # if not input image is provided, generate a random one
+        if input_image is None or denoising == 1:
+            _sample = torch.randn(shape, device=device)
+        else:
+            # otherwise, use the input image
+            # first encode the image in the latent space
+            _sample = self.vqgan.encode(input_image, quantize=False, include_embeddings=True)
+            # normalize the image to -1 and 1
+            _sample = ((_sample - self.vqgan.codebook.embeddings.min()) /
+                     (self.vqgan.codebook.embeddings.max() - self.vqgan.codebook.embeddings.min())) * 2.0 - 1.0
+            # noise the image to the desired point
+            _sample = self.noise_image(_sample, denoising)
+        
+
+        if isinstance(self.vqgan, VQGAN):
+            # denormalize TODO: Remove eventually
+            _sample = (((_sample + 1.0) / 2.0) * (self.vqgan.codebook.embeddings.max() -
+                                                self.vqgan.codebook.embeddings.min())) + self.vqgan.codebook.embeddings.min()
+
+            _sample = self.vqgan.decode(_sample, quantize=True)
+        else:
+            unnormalize_img(_sample)
+
+        return _sample
 
     @torch.inference_mode()
     def sample(self, cond=None, cond_scale=1., batch_size=16, input_image=None, denoising = 1):

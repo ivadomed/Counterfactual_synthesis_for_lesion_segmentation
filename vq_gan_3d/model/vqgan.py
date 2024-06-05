@@ -12,7 +12,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.distributed as dist
 
-from vq_gan_3d.utils import shift_dim, adopt_weight, comp_getattr, merge_images
+from vq_gan_3d.utils import shift_dim, adopt_weight, comp_getattr
 from vq_gan_3d.model.lpips import LPIPS
 from vq_gan_3d.model.codebook import Codebook
 
@@ -99,44 +99,73 @@ class VQGAN(pl.LightningModule):
                 return vq_output['encodings']
         return h
     
+    def merge_images(self, img1, img2):
+        assert img1.shape[3:] == img2.shape[3:], "Images must have the same shape across Y and Z axis"
+
+        fade_length = img2.shape[2] // 2
+        fade_factor = np.linspace(0, 1, fade_length)
+        fade_factor = [fade_factor] * img2.shape[1]
+        fade_factor = [fade_factor] * img2.shape[0]
+        fade_factor = [fade_factor] * img2.shape[3]
+        fade_factor = [fade_factor] * img2.shape[4]  
+        fade_factor = np.array(fade_factor)
+        fade_factor = np.transpose(fade_factor, (2,3,4,1,0))
+
+
+        fade1 = img1[:,:, -fade_length:, :, :] * (1-fade_factor)
+        fade2 = img2[:,:, :fade_length, :, :] * fade_factor
+
+        fade = fade1 + fade2
+        merged = np.concatenate((img1[:,:, :-fade_length, :, :], fade, img2[:,:, fade_length:, :, :]), axis=2)
+
+        return merged
 
     def decode(self, latent, quantize=True):
-        """
-        Decode a latent tensor into an image. As this step bottleneck the memory, we decode the image in parts and merge them with a fade".
-        """
         num_parts = self.decoding_diviser  # Set the desired number of parts
-        assert num_parts > 0, "Number of parts must be greater than 0"
-        assert num_parts % 2 == 1, "Number of parts must be odd"
 
-        if num_parts == 1:
-            part_size = latent.shape[2] # in this case, their is no fade
-        else:
-            part_size = latent.shape[2] // ( num_parts - 1 )
-        
+        num_parts = 3
+        part_size = latent.shape[2] // ( num_parts - 1 )
 
         for i in range(num_parts):
-            # Get the appropriate part of the image in the latent space
             start_idx = i * (part_size//2)
             end_idx = (i + 2) * (part_size//2)
             latent_part = latent[:, :, start_idx:end_idx, :, :]
-
-            # Decode the part
             if quantize:
                 vq_output = self.codebook(latent_part)
                 latent_part = vq_output['encodings']
             h = F.embedding(latent_part, self.codebook.embeddings)
             h = self.post_vq_conv(shift_dim(h, -1, 1))
             decoded_part = self.decoder(h)
-
-            # merge the decoded part
+            # convert to numpy
             decoded_part_np = decoded_part.detach().cpu().numpy()
             del h, latent_part, decoded_part
             if i == 0:
                 decoded = decoded_part_np
             else:
-                decoded = merge_images(decoded, decoded_part_np)
-
+                decoded = self.merge_images(decoded, decoded_part_np)
+        # decoded back to torch
         decoded = torch.from_numpy(decoded).to(self.device)
+        return decoded
+
+    def decode_(self, latent, quantize=True):
+        
+        num_parts = self.decoding_diviser  # Set the desired number of parts
+        part_size = latent.shape[2] // num_parts
+        decoded_parts = []
+        for i in range(num_parts):
+            start_idx = i * part_size
+            end_idx = (i + 1) * part_size
+            latent_part = latent[:, :, start_idx:end_idx, :, :]
+            if quantize:
+                vq_output = self.codebook(latent_part)
+                latent_part = vq_output['encodings']
+            h = F.embedding(latent_part, self.codebook.embeddings)
+            h = self.post_vq_conv(shift_dim(h, -1, 1))
+            decoded_part = self.decoder(h)
+            decoded_parts.append(decoded_part)
+
+        
+        decoded = torch.cat(decoded_parts, 2)
         return decoded
 
     def forward(self, x, optimizer_idx=None, log_image=False):

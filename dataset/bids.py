@@ -19,6 +19,7 @@ from monai.transforms import (
     ResizeWithPadOrCropd,
     EnsureChannelFirstd,
     ToTensord,
+    Transposesd,
 )
 import os
 from typing import Optional
@@ -103,7 +104,7 @@ class BIDSDataset(Dataset):
                             if self.derivatives:
                                 self.link_derivatives(file, derivatives_files_paths)
 
-        print(f'Found {len(files_paths)} files in {self.root_dir}')
+        print(f'Found {len(files_paths)} files in {self.root_dir} ..')
         return files_paths
     
     def get_sample_dict(self, idx: int):
@@ -131,11 +132,12 @@ class BIDSDataset(Dataset):
         img_np = img.numpy()
         a_min = img_np.min().astype(float)
         a_max = img_np.max().astype(float)
-
+        print(img.shape)
 
         TRAIN_VQGAN_TRANSORMS = Compose([
             LoadImaged(keys=keys),
             EnsureChannelFirstd(keys=keys),
+            Transposesd(keys=keys, indices=(2, 0, 1)),
             ScaleIntensityRanged(keys=['data'], a_min=a_min, a_max=a_max, b_min=-1, b_max=1),
             # change here to the desired shape (/!\ must be powers of 2, GPU memory consuption is proportional to the size of the image)
             ResizeWithPadOrCropd(keys=keys, spatial_size=[32, 256, 256], mode="replicate"),
@@ -150,12 +152,14 @@ class BIDSDataset(Dataset):
         TRAIN_DDPM_TRANSFORMS = Compose([
             LoadImaged(keys=keys),
             EnsureChannelFirstd(keys=keys),
+            Transposesd(keys=keys, indices=(2, 0, 1)),
             ScaleIntensityRanged(keys=['data'], a_min=a_min, a_max=a_max, b_min=-1, b_max=1),
             # change here to the desired shape (/!\ must be powers of 2, GPU memory consuption is proportional to the size of the image)
             ResizeWithPadOrCropd(keys=keys, spatial_size=[32, 256, 256], mode="replicate"),
             RandShiftIntensityd(keys=keys, offsets=0.1, prob=0.5),
-            RandRotated(keys=keys, range_x=0.3, range_y=0.3, range_z=0.3, prob=0.5),
+            RandRotated(keys=keys, range_x=0.3, range_y=0.0, range_z=0.0, prob=0.5),
             ToTensord(keys=keys),
+            
         ])
 
 
@@ -164,4 +168,5 @@ class BIDSDataset(Dataset):
         else:
             sample_tensors = TRAIN_DDPM_TRANSFORMS(sample_paths)
         
+
         return sample_tensors

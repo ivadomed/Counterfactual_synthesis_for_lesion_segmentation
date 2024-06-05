@@ -29,7 +29,7 @@ TRAIN_VQGAN_TRANSFORMS = Compose([
 # For the DDPM training, we can use larger images since the decoding can be devided in several patches
 TRAIN_DDPM_TRANSFORMS = Compose([
     RandShiftIntensity(offsets=0.1, prob=0.5),
-    RandRotate(range_x=0.3, range_y=0.3, range_z=0.3, prob=0.5),
+    RandRotate(range_x=0.3, range_y=0.0, range_z=0.0, prob=0.5),
 ])
 
 

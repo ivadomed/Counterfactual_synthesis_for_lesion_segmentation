@@ -6,7 +6,8 @@ The rest of the 'readme' is largely based on the content of the 'readme' in the 
 
 Original paper : ["Medical Diffusion: Denoising Diffusion Probabilistic Models for 3D Medical Image Synthesis"](https://arxiv.org/abs/2211.03364).
 
-![Generated Samples by our Medical Diffusion model](assets/generated_samples.gif)
+![Generated Samples by our Medical Diffusion model](gif_canproco_8_d=0.25.gif)
+![Generated Samples by our Medical Diffusion model with a denoising strengh variation](gif_canproco_8_d_range.gif)
 
 # System Requirements
 This code has been tested on Ubuntu 20.04 and an NVIDIA Quadro RTX 6000 GPU. Furthermore it was developed using Python v3.8.
@@ -42,7 +43,7 @@ python train/train_ddpm.py model=ddpm dataset=brats model.results_folder_postfix
 Where you again need to specify the path to the VQ-GAN checkpoint from before (e.g. ```model.vqgan_ckpt='/home/<user>/Desktop/medicaldiffusion/checkpoints/vq_gan/BRATS/flair/lightning_logs/version_0/checkpoints/latest_checkpoint.ckpt'```)
 
 # Train on a BIDS dataset
-If you have a dataset that follow the [BIDS](https://bids.neuroimaging.io/) standard, you can use the BIDSDataset class to load your data. It will automatically select all the nifti files in the "sub-##" with the given contrasts.         
+If you have a dataset that follow the [BIDS](https://bids.neuroimaging.io/) standard, you can use the BIDSDataset class to load your data. It will automatically select all the nifti files in the "sub-##" folders with the given contrasts.         
 
 The file "dataset/bids.py" can be modified to manage image shape and data augmentation transforms
 
