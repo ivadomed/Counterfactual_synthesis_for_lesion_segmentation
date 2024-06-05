@@ -6,8 +6,9 @@ The rest of the 'readme' is largely based on the content of the 'readme' in the 
 
 Original paper : ["Medical Diffusion: Denoising Diffusion Probabilistic Models for 3D Medical Image Synthesis"](https://arxiv.org/abs/2211.03364).
 
-![Generated Samples by our Medical Diffusion model](gif_canproco_8_d=0.25.gif)
-![Generated Samples by our Medical Diffusion model with a denoising strengh variation](gif_canproco_8_d_range.gif)
+![Generated Samples by our Medical Diffusion model](assets/gif_canproco_8_d=0.25.gif)
+
+![Generated Samples by our Medical Diffusion model with a denoising strengh variation](assets/gif_canproco_8_d_range.gif)
 
 # System Requirements
 This code has been tested on Ubuntu 20.04 and an NVIDIA Quadro RTX 6000 GPU. Furthermore it was developed using Python v3.8.
