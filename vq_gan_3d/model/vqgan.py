@@ -150,6 +150,8 @@ class VQGAN(pl.LightningModule):
     def decode_(self, latent, quantize=True):
         
         num_parts = self.decoding_diviser  # Set the desired number of parts
+        num_parts = 2
+        print(num_parts)
         part_size = latent.shape[2] // num_parts
         decoded_parts = []
         for i in range(num_parts):
@@ -178,7 +180,7 @@ class VQGAN(pl.LightningModule):
         recon_loss = F.l1_loss(x_recon, x) * self.l1_weight
 
         # Selects one random 2D image from each 3D Image
-        frame_idx = torch.randint(0, T, [B]).cuda()
+        frame_idx = torch.randint(0, T, [B]).to(self.device)
         frame_idx_selected = frame_idx.reshape(-1,
                                                1, 1, 1, 1).repeat(1, C, 1, H, W)
         frames = torch.gather(x, 2, frame_idx_selected).squeeze(2)

@@ -47,13 +47,10 @@ def get_dataset(cfg):
         sampler = None
         return train_dataset, val_dataset, sampler
     if cfg.dataset.name == 'BIDS':
-        print('bjr')
-        print(cfg.dataset.derivatives)
-        print(cfg.dataset.contrasts)
         train_dataset = BIDSDataset(
-            root_dir=cfg.dataset.root_dir, is_VQGAN=cfg.dataset.is_VQGAN, contrasts=cfg.dataset.contrasts, derivatives=cfg.dataset.derivatives)
+            root_dir=cfg.dataset.root_dir, is_VQGAN=cfg.dataset.is_VQGAN, contrasts=cfg.dataset.contrasts, derivatives=cfg.dataset.derivatives, mandatory_derivates=cfg.dataset.mandatory_derivates)
         val_dataset = BIDSDataset(
-            root_dir=cfg.dataset.root_dir, is_VQGAN=cfg.dataset.is_VQGAN, contrasts=cfg.dataset.contrasts, derivatives=cfg.dataset.derivatives)
+            root_dir=cfg.dataset.root_dir, is_VQGAN=cfg.dataset.is_VQGAN, contrasts=cfg.dataset.contrasts, derivatives=cfg.dataset.derivatives, mandatory_derivates=cfg.dataset.mandatory_derivates)
         sampler = None
         return train_dataset, val_dataset, sampler
     raise ValueError(f'{cfg.dataset.name} Dataset is not available')

@@ -3,11 +3,10 @@ from ddpm.time_embedding import TimeEmbbeding
 import monai.networks.nets as nets
 import torch
 import torch.nn as nn
-from einops import rearrange
+from einops import rearranges
 
 from monai.networks.blocks import UnetBasicBlock, UnetResBlock, UnetUpBlock, Convolution, UnetOutBlock
 from monai.networks.layers.utils import get_act_layer
-
 
 class DownBlock(nn.Module):
     def __init__(
@@ -29,6 +28,7 @@ class DownBlock(nn.Module):
                 get_act_layer(name=act_name),
                 nn.Linear(cond_emb_dim, in_ch),
             )
+
         self.down_op = UnetBasicBlock(
             spatial_dims, in_ch, out_ch, act_name=act_name, **kwargs)
 
@@ -53,6 +53,7 @@ class DownBlock(nn.Module):
 
         # ----------- Image ---------
         y = self.down_op(x)
+
         return y
 
 

@@ -505,13 +505,14 @@ class Unet3D(nn.Module):
         self,
         *args,
         cond_scale=2.,
+        T2I_features = None,
         **kwargs
     ):
-        logits = self.forward(*args, null_cond_prob=0., **kwargs)
+        logits = self.forward(*args, null_cond_prob=0., T2I_features=T2I_features, **kwargs)
         if cond_scale == 1 or not self.has_cond:
             return logits
 
-        null_logits = self.forward(*args, null_cond_prob=1., **kwargs)
+        null_logits = self.forward(*args, null_cond_prob=1., T2I_features=T2I_features, **kwargs)
         return null_logits + (logits - null_logits) * cond_scale
 
     def forward(
@@ -522,7 +523,8 @@ class Unet3D(nn.Module):
         null_cond_prob=0.,
         focus_present_mask=None,
         # probability at which a given batch sample will focus on the present (0. is all off, 1. is completely arrested attention across time)
-        prob_focus_present=0.
+        prob_focus_present=0.,
+        T2I_features = None,
     ):
         assert not (self.has_cond and not exists(cond)
                     ), 'cond must be passed in if cond_dim specified'
@@ -541,22 +543,24 @@ class Unet3D(nn.Module):
         t = self.time_mlp(time) if exists(self.time_mlp) else None
 
         # classifier free guidance
-
         if self.has_cond:
             batch, device = x.shape[0], x.device
             mask = prob_mask_like((batch,), null_cond_prob, device=device)
-            cond = torch.where(rearrange(mask, 'b -> b 1'),
-                               self.null_cond_emb, cond)
-            t = torch.cat((t, cond), dim=-1)
+            cond = torch.where(rearrange(mask, 'b -> b 1'), self.null_cond_emb, cond)
+            t = t + cond
 
         h = []
-
-        for block1, block2, spatial_attn, temporal_attn, downsample in self.downs:
+        for blox_idx in range(len(self.downs)):
+            block1, block2, spatial_attn, temporal_attn, downsample = self.downs[blox_idx]
+            T2I_feature = T2I_features[blox_idx] if exists(T2I_features) else None
+            
             x = block1(x, t)
             x = block2(x, t)
             x = spatial_attn(x)
             x = temporal_attn(x, pos_bias=time_rel_pos_bias,
                               focus_present_mask=focus_present_mask)
+            if T2I_feature is not None:
+                x = x + T2I_feature
             h.append(x)
             x = downsample(x)
 
@@ -709,9 +713,9 @@ class GaussianDiffusion(nn.Module):
             self.posterior_log_variance_clipped, t, x_t.shape)
         return posterior_mean, posterior_variance, posterior_log_variance_clipped
 
-    def p_mean_variance(self, x, t, clip_denoised: bool, cond=None, cond_scale=1.):
+    def p_mean_variance(self, x, t, clip_denoised: bool, cond=None, cond_scale=1., T2I_features = None):
         x_recon = self.predict_start_from_noise(
-            x, t=t, noise=self.denoise_fn.forward_with_cond_scale(x, t, cond=cond, cond_scale=cond_scale))
+            x, t=t, noise=self.denoise_fn.forward_with_cond_scale(x, t, cond=cond, cond_scale=cond_scale, T2I_features=T2I_features))
 
         if clip_denoised:
             s = 1.
@@ -763,10 +767,10 @@ class GaussianDiffusion(nn.Module):
         return noised_img
 
     @torch.inference_mode()
-    def p_sample(self, x, t, cond=None, cond_scale=1., clip_denoised=True):
+    def p_sample(self, x, t, cond=None, cond_scale=1., clip_denoised=True, T2I_features = None):
         b, *_, device = *x.shape, x.device
         model_mean, _, model_log_variance = self.p_mean_variance(
-            x=x, t=t, clip_denoised=clip_denoised, cond=cond, cond_scale=cond_scale)
+            x=x, t=t, clip_denoised=clip_denoised, cond=cond, cond_scale=cond_scale, T2I_features=T2I_features)
         noise = torch.randn_like(x)
         # no noise when t == 0
         nonzero_mask = (1 - (t == 0).float()).reshape(b,
@@ -774,7 +778,7 @@ class GaussianDiffusion(nn.Module):
         return model_mean + nonzero_mask * (0.5 * model_log_variance).exp() * noise
 
     @torch.inference_mode()
-    def p_sample_loop(self, shape, cond=None, cond_scale=1., input_image=None, denoising = 1):
+    def p_sample_loop(self, shape, cond=None, cond_scale=1., input_image=None, denoising = 1,T2I_features = None):
         device = self.betas.device
 
         b = shape[0]
@@ -793,11 +797,10 @@ class GaussianDiffusion(nn.Module):
         
          # Get the time step corresponding to the noise level
         t_max = int(denoising * self.num_timesteps)
-        print(t_max)
 
         for t in tqdm(reversed(range(0, t_max)), desc='sampling loop time step', total=self.num_timesteps):
             img = self.p_sample(img, torch.full(
-                (b,), t, device=device, dtype=torch.long), cond=cond, cond_scale=cond_scale)
+                (b,), t, device=device, dtype=torch.long), cond=cond, cond_scale=cond_scale, T2I_features=T2I_features)
 
         return img
     
@@ -846,7 +849,7 @@ class GaussianDiffusion(nn.Module):
         return _sample
 
     @torch.inference_mode()
-    def sample(self, cond=None, cond_scale=1., batch_size=16, input_image=None, denoising = 1):
+    def sample(self, cond=None, cond_scale=1., batch_size=16, input_image=None, denoising = 1, T2I_features = None):
         device = next(self.denoise_fn.parameters()).device
 
         if is_list_str(cond):
@@ -858,7 +861,7 @@ class GaussianDiffusion(nn.Module):
         num_frames = self.num_frames
 
         _sample = self.p_sample_loop(
-            (batch_size, channels, num_frames, image_size, image_size), cond=cond, cond_scale=cond_scale, input_image=input_image, denoising=denoising)
+            (batch_size, channels, num_frames, image_size, image_size), cond=cond, cond_scale=cond_scale, input_image=input_image, denoising=denoising, T2I_features=T2I_features)
 
         if isinstance(self.vqgan, VQGAN):
             # denormalize TODO: Remove eventually
@@ -898,7 +901,7 @@ class GaussianDiffusion(nn.Module):
                     t, x_start.shape) * noise
         )
 
-    def p_losses(self, x_start, t, cond=None, noise=None, **kwargs):
+    def p_losses(self, x_start, t, T2I_features=None, cond=None, noise=None, **kwargs):
         b, c, f, h, w, device = *x_start.shape, x_start.device
         noise = default(noise, lambda: torch.randn_like(x_start))
 
@@ -909,7 +912,7 @@ class GaussianDiffusion(nn.Module):
                 tokenize(cond), return_cls_repr=self.text_use_bert_cls)
             cond = cond.to(device)
 
-        x_recon = self.denoise_fn(x_noisy, t, cond=cond, **kwargs)
+        x_recon = self.denoise_fn(x_noisy, t, cond=cond, T2I_features = T2I_features, **kwargs)
 
         if self.loss_type == 'l1':
             loss = F.l1_loss(noise, x_recon)
@@ -920,7 +923,7 @@ class GaussianDiffusion(nn.Module):
 
         return loss
 
-    def forward(self, x, *args, **kwargs):
+    def forward(self, x, sampling_method='linear', T2I_features=None, *args, **kwargs):
         if isinstance(self.vqgan, VQGAN):
             with torch.no_grad():
                 x = self.vqgan.encode(
@@ -930,15 +933,20 @@ class GaussianDiffusion(nn.Module):
                      (self.vqgan.codebook.embeddings.max() -
                       self.vqgan.codebook.embeddings.min())) * 2.0 - 1.0
         else:
-            print("Hi")
             x = normalize_img(x)
 
         b, device, img_size, = x.shape[0], x.device, self.image_size
         check_shape(x, 'b c f h w', c=self.channels,
                     f=self.num_frames, h=img_size, w=img_size)
-        t = torch.randint(0, self.num_timesteps, (b,), device=device).long()
+        if sampling_method == 'linear':
+            t = torch.randint(0, self.num_timesteps, (b,), device=device).long()
+        elif sampling_method == 'cubic':
+            t_ = torch.randint(0, self.num_timesteps, (b,), device=device).long()
+            t = ((1-(t_ / self.num_timesteps))**3) * self.num_timesteps
+        else :
+            raise NotImplementedError()
 
-        return self.p_losses(x, t, *args, **kwargs)
+        return self.p_losses(x, t, T2I_features=T2I_features, *args, **kwargs)
 
 # trainer class
 

@@ -21,6 +21,7 @@ import pytorch_lightning as pl
 
 @hydra.main(config_path='../config', config_name='base_cfg', version_base=None)
 def run(cfg: DictConfig):
+    
     torch.cuda.set_device(cfg.model.gpus)
 
     if cfg.model.denoising_fn == 'Unet3D':

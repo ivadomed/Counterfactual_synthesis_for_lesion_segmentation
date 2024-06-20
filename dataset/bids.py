@@ -19,7 +19,8 @@ from monai.transforms import (
     ResizeWithPadOrCropd,
     EnsureChannelFirstd,
     ToTensord,
-    Transposesd,
+    Transposed,
+    Flipd,
 )
 import os
 from typing import Optional
@@ -30,7 +31,7 @@ import time
 
 
 class BIDSDataset(Dataset):
-    def __init__(self, root_dir: str, is_VQGAN: bool = False, contrasts = [], derivatives: bool = False):
+    def __init__(self, root_dir: str, is_VQGAN: bool = False, contrasts = [], derivatives: bool = False, mandatory_derivates=[]):
         super().__init__()
         self.root_dir = root_dir
 
@@ -42,10 +43,35 @@ class BIDSDataset(Dataset):
 
         # If derivatives is set to True, the dataset will look for the derivatives in the derivatives folder
         self.derivatives = derivatives
+        
 
         # Encapssulate a list of dictionnaries with the derivative name as key and the path as value
         self.derivatives_paths = []
         self.file_paths = self.get_data_files()
+        
+        if self.derivatives:
+            #list of derivatives that must be present in the derivatives folder in order to be considered
+            self.mandatory_derivates = mandatory_derivates
+            self.check_mandatory_derivatives()
+        
+        print(f'Found {len(self.file_paths)} files in {self.root_dir}')
+    
+    def check_mandatory_derivatives(self):
+        """
+        This function remove all the file path which don't have the mandatory derivatives
+        """
+        idx_to_pop = []
+        for idx, derivative_paths in enumerate(self.derivatives_paths):
+            for mandatory_derivative in self.mandatory_derivates:
+                if mandatory_derivative not in derivative_paths:
+                    idx_to_pop.append(idx)
+                    break
+        # sort the list in reverse order to avoid index errors
+        idx_to_pop.sort(reverse=True)
+        for idx in idx_to_pop:
+            self.file_paths.pop(idx)
+            self.derivatives_paths.pop(idx)
+
     
     def find_derivatives(self):
         """
@@ -104,7 +130,7 @@ class BIDSDataset(Dataset):
                             if self.derivatives:
                                 self.link_derivatives(file, derivatives_files_paths)
 
-        print(f'Found {len(files_paths)} files in {self.root_dir} ..')
+        
         return files_paths
     
     def get_sample_dict(self, idx: int):
@@ -132,12 +158,13 @@ class BIDSDataset(Dataset):
         img_np = img.numpy()
         a_min = img_np.min().astype(float)
         a_max = img_np.max().astype(float)
-        print(img.shape)
+
 
         TRAIN_VQGAN_TRANSORMS = Compose([
             LoadImaged(keys=keys),
             EnsureChannelFirstd(keys=keys),
-            Transposesd(keys=keys, indices=(2, 0, 1)),
+            Transposed(keys=keys, indices=(0, 3, 1, 2)),
+            Flipd(keys=keys, spatial_axis=1),
             ScaleIntensityRanged(keys=['data'], a_min=a_min, a_max=a_max, b_min=-1, b_max=1),
             # change here to the desired shape (/!\ must be powers of 2, GPU memory consuption is proportional to the size of the image)
             ResizeWithPadOrCropd(keys=keys, spatial_size=[32, 256, 256], mode="replicate"),
@@ -152,14 +179,14 @@ class BIDSDataset(Dataset):
         TRAIN_DDPM_TRANSFORMS = Compose([
             LoadImaged(keys=keys),
             EnsureChannelFirstd(keys=keys),
-            Transposesd(keys=keys, indices=(2, 0, 1)),
+            #Transposed(keys=keys, indices=(0, 3, 1, 2)),
+            #Flipd(keys=keys, spatial_axis=1),
             ScaleIntensityRanged(keys=['data'], a_min=a_min, a_max=a_max, b_min=-1, b_max=1),
             # change here to the desired shape (/!\ must be powers of 2, GPU memory consuption is proportional to the size of the image)
             ResizeWithPadOrCropd(keys=keys, spatial_size=[32, 256, 256], mode="replicate"),
             RandShiftIntensityd(keys=keys, offsets=0.1, prob=0.5),
             RandRotated(keys=keys, range_x=0.3, range_y=0.0, range_z=0.0, prob=0.5),
             ToTensord(keys=keys),
-            
         ])
 
 
@@ -168,5 +195,4 @@ class BIDSDataset(Dataset):
         else:
             sample_tensors = TRAIN_DDPM_TRANSFORMS(sample_paths)
         
-
         return sample_tensors
