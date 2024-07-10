@@ -10,9 +10,9 @@ It aditionnaly features :
 
 - [BIDS](https://bids.neuroimaging.io/) datasets support
   - Automatically browse into images
-  - Can select certain contrasts
+  - Can select given contrasts
   - Can join derivate files to the main image
-  - Can select images with certain derivates available
+  - Can select images with given derivate available
 - GPU memory optimisation trick
   - Allow user to split VQ-GAN decoding in order to extend maximum image size.
 - [T2I-Adapater](https://arxiv.org/abs/2302.08453) implementation
@@ -69,7 +69,7 @@ python train/train_ddpm.py model=ddpm dataset=bids dataset.root_dir=<ROOT_DIRECT
 ```
 Where you again need to specify the path to the VQ-GAN checkpoint from before (e.g. ```model.vqgan_ckpt='/home/<user>/Desktop/medicaldiffusion/checkpoints/vq_gan/DEFAULT/own_dataset/lightning_logs/version_0/checkpoints/latest_checkpoint.ckpt'```)
 
-You should as well make sure to specify the shape you wich to center crop/pad your images with : (2 * diffusion_depth_size,2 * model.diffusion_img_size, 2 * model.diffusion_img_size)
+You should as well make sure to specify the shape you wish to center crop/pad your images to : (2 * diffusion_depth_size,2 * model.diffusion_img_size, 2 * model.diffusion_img_size)
 
 #### Train T2I-Adapter model
 To train the T2I-Adapter model that add a control channel to the pre-trained diffusion model, you need to run the following command :
@@ -78,7 +78,7 @@ python train/train_T2I.py model=T2I dataset=bids dataset.root_dir=<INSERT_PATH_T
 ```
 
 ### Train on an un-formated dataset
-To simpify the dataloading for your own dataset, the original repo provides a default dataset that simply requires the path to the folder with your NifTI images inside, i.e.
+To simpify the data-loading for your own dataset, the medical-diffusion provides a default dataset that simply requires the path to the folder with your NifTI images inside, i.e.
 
     root_dir/					# Path to the folder that contains the images
     ├── img1.nii                # The name of the NifTI file is not important
