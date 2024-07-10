@@ -22,7 +22,7 @@ It aditionnaly features :
   - Image-to-Image with monitorable noising strengh
   - Analyse differences to extract lesion segmentation
 
-![Generated Samples by our Medical Diffusion model](assets/lesion_segmentaiton_tr_0.3_gif_sci_paris_8_d=0.25_seg-manual.gif)
+![Generated Samples by our Medical Diffusion model following a T2I constraint](assets\0807_img2img_segmentation_sci-paris_1_d_0.8_th_0.4_f_filter_T2I_True.gif)
 
 ![Generated Samples by our Medical Diffusion model with a denoising strengh variation](assets/gif_sci_paris_8_d_range.gif)
 
