@@ -3,7 +3,6 @@ from ddpm.time_embedding import TimeEmbbeding
 import monai.networks.nets as nets
 import torch
 import torch.nn as nn
-from einops import rearranges
 
 from monai.networks.blocks import UnetBasicBlock, UnetResBlock, UnetUpBlock, Convolution, UnetOutBlock
 from monai.networks.layers.utils import get_act_layer

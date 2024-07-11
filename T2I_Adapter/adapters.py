@@ -11,6 +11,7 @@ from torch.optim import Adam
 import torch.nn.init as init
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 
 ##### Functions used in the training loop #####
@@ -323,6 +324,8 @@ class T2I_Trainer(object):
 
 
             if self.step != 0 and self.step % self.save_and_sample_every == 0:
+                if not os.path.exists(self.results_folder):
+                    os.makedirs(self.results_folder)
                 # save model
                 torch.save(self.T2I_model.state_dict(), f'{self.results_folder}/T2I_model_{self.step}.pt')
                 # run an inference

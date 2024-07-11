@@ -51,7 +51,7 @@ def run(cfg: DictConfig):
 
     trainer = T2I_Trainer(
         T2I_model=T2I_adapter,
-        T2I_derivate_name=cfg.dataset.mandatory_derivatates[0],
+        T2I_derivate_name=cfg.dataset.mandatory_derivates[0],
         diffusion_model=diffusion,
         dataset=train_dataset,
         results_folder=cfg.model.results_folder,
