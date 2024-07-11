@@ -8,6 +8,9 @@ from collections import OrderedDict
 from torch.utils.data import Dataset, DataLoader
 from torch.cuda.amp import autocast, GradScaler
 from torch.optim import Adam
+import torch.nn.init as init
+import numpy as np
+import matplotlib.pyplot as plt
 
 
 ##### Functions used in the training loop #####
@@ -37,6 +40,12 @@ def video_tensor_to_gif(tensor, path, duration=120, loop=0, optimize=True):
     first_img.save(path, save_all=True, append_images=rest_imgs,
                    duration=duration, loop=loop, optimize=optimize)
     return images
+
+def re_orient(image):
+    """ Take a 2D of a spinal coord as input oriented as expected by the model 
+    and return the image oriented as expected by the conventions
+    """
+    return np.flip(np.rot90(image,1),1)
 
 ##### Functions used Network architecture #####
 
@@ -115,6 +124,19 @@ class Downsample(nn.Module):
         assert x.shape[1] == self.channels
         return self.op(x)
 
+class ZeroConv3d(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True):
+        super(ZeroConv3d, self).__init__()
+        self.conv = nn.Conv3d(in_channels, out_channels, kernel_size, stride, padding, dilation, groups, bias)
+        # Initialize weights to zero
+        init.constant_(self.conv.weight, 0)
+        # If the layer includes a bias, initialize it to zero (optional)
+        if bias:
+            init.constant_(self.conv.bias, 0)
+
+    def forward(self, x):
+        return self.conv(x)
+
 
 class ResnetBlock(nn.Module):
     """
@@ -129,9 +151,10 @@ class ResnetBlock(nn.Module):
         use_conv (bool, optional): Whether to use convolutional downsampling. Defaults to True.
     """
 
-    def __init__(self, in_c, out_c, down, ksize=3, sk=False, use_conv=True):
+    def __init__(self, in_c, out_c, down, ksize=3, sk=False, use_conv=True, zero_conv=False):
         super().__init__()
         ps = ksize // 2
+        self.zero_conv = zero_conv
         if in_c != out_c or sk == False:
             self.in_conv = nn.Conv3d(in_c, out_c, ksize, 1, ps)
         else:
@@ -147,6 +170,9 @@ class ResnetBlock(nn.Module):
         self.down = down
         if self.down == True:
             self.down_opt = Downsample(in_c, use_conv=use_conv)
+        # create a zero convolutional layer, this way, the T2I has no impact on output at the begging of training
+        self.zero_conv = ZeroConv3d(out_c, out_c, kernel_size=1, stride=1, padding=0)
+
 
     def forward(self, x):
         if self.down == True:
@@ -158,9 +184,12 @@ class ResnetBlock(nn.Module):
         h = self.act(h)
         h = self.block2(h)
         if self.skep is not None:
-            return h + self.skep(x)
+            h = h + self.skep(x)
         else:
-            return h + x
+            h = self.zero_conv(h + x)
+        if self.zero_conv:
+            h = self.zero_conv(h)
+        return h
 
 
 class Adapter_Medical_Diffusion(nn.Module):
@@ -169,7 +198,7 @@ class Adapter_Medical_Diffusion(nn.Module):
     It takes as an input an image control and outputs a list of features to be added to the 4 diffusion UNet encoder layers outputs.
     """
 
-    def __init__(self, channels=[128, 256, 512, 1024], nums_rb=3, cin=1, ksize=3, sk=True, use_conv=True, ddpm_pt=None, vqgan_ckpt=None):
+    def __init__(self, channels=[128, 256, 512, 1024], nums_rb=3, cin=1, ksize=3, sk=True, use_conv=True, zero_conv=False):
         super(Adapter_Medical_Diffusion, self).__init__()
 
         # Load the 
@@ -182,15 +211,12 @@ class Adapter_Medical_Diffusion(nn.Module):
         self.body = []
         for i in range(len(channels)):
             for j in range(nums_rb):
-                """if (i == 2) and (j == 0):
-                    self.body.append(
-                        ResnetBlock(channels[i - 1], channels[i], down=True, ksize=ksize, sk=sk, use_conv=use_conv))"""
                 if (i >= 1) and (j == 0):
                     self.body.append(
-                        ResnetBlock(channels[i - 1], channels[i], down=True, ksize=ksize, sk=sk, use_conv=use_conv))
+                        ResnetBlock(channels[i - 1], channels[i], down=True, ksize=ksize, sk=sk, use_conv=use_conv, zero_conv=zero_conv))
                 else:
                     self.body.append(
-                        ResnetBlock(channels[i], channels[i], down=False, ksize=ksize, sk=sk, use_conv=use_conv))
+                        ResnetBlock(channels[i], channels[i], down=False, ksize=ksize, sk=sk, use_conv=use_conv, zero_conv=zero_conv))
         self.body = nn.ModuleList(self.body)
         self.conv_in = nn.Conv3d(cin, channels[0], 3, 1, 1)
 
@@ -217,7 +243,7 @@ class Adapter_Medical_Diffusion(nn.Module):
         return features
 
 class T2I_Trainer(object):
-    def __init__(self, T2I_model=None, T2I_derivate_name=None, diffusion_model=None, amp=False, dataset=None, batch_size=1, save_and_sample_every=100, train_lr=1e-5, train_num_steps=10000, gradient_accumulate_every=2, results_folder='./results', num_workers=20):
+    def __init__(self, T2I_model=None, T2I_derivate_name=None, diffusion_model=None, amp=False, dataset=None, batch_size=1, save_and_sample_every=5000, train_lr=1e-5, train_num_steps=50000, gradient_accumulate_every=2, results_folder='./results', num_workers=20):
         self.T2I_model = T2I_model.cuda()
         self.T2I_derivate_name = T2I_derivate_name
         self.diffusion = diffusion_model
@@ -244,6 +270,22 @@ class T2I_Trainer(object):
         """
         self.T2I_model.load_state_dict(torch.load(T2I_pt))
         print('loaded model')
+
+    def inference_to_png(self, inference, T2I_image):
+        """
+        Save the output of the diffusion model and the T2I image to a png file with the T2I_image guidance as overlay
+        """
+
+        # plot the input, output with and without T2I?, add as well the T2I input as a red overlay with 0.5 alpha
+        T2I_image = np.ma.masked_equal(T2I_image.cpu().numpy(), 0)
+        fig, ax = plt.subplots(figsize=(5, 5))
+        ax.imshow(re_orient(inference[0,0,16].cpu().numpy()), cmap='gray', vmin=-1, vmax=1)
+        ax.imshow(re_orient(T2I_image[0,0,16]), cmap='Reds', alpha=0.5,  vmin=0, vmax=1)
+        ax.axis('off')
+
+        # save the figure
+        fig.savefig(f'{self.results_folder}/{self.step}.png')
+
 
     def train(
         self,
@@ -283,6 +325,16 @@ class T2I_Trainer(object):
             if self.step != 0 and self.step % self.save_and_sample_every == 0:
                 # save model
                 torch.save(self.T2I_model.state_dict(), f'{self.results_folder}/T2I_model_{self.step}.pt')
+                # run an inference
+                with torch.no_grad():
+                    self.T2I_model.eval()
+                    sample = next(self.dl)
+                    T2I_image = sample[self.T2I_derivate_name].cuda()
+                    T2I_features = self.T2I_model(T2I_image)
+                    image = sample['data'].cuda()
+                    inference = self.diffusion.sample(batch_size=1, T2I_features = T2I_features)
+                    self.inference_to_png(inference, T2I_image)
+                    self.T2I_model.train() 
 
             log_fn(log)
             self.step += 1
@@ -302,7 +354,10 @@ x = torch.randn(1, 1, 32, 256, 256)
 output = model(x)
 for i in range (len(output)):
     print("output " + str(i) + " : " + str(output[i].shape))
+    # print max of each output
+    print("max of output " + str(i) + " : " + str(output[i].max().item()))
 """
+
 """
 result :
 output 0 : torch.Size([3, 128, 16, 128, 128])

@@ -121,7 +121,7 @@ class VQGAN(pl.LightningModule):
         return merged
 
     def decode(self, latent, quantize=True):
-        num_parts = self.decoding_diviser
+        num_parts = self.decoding_diviser  # Set the desired number of parts
         part_size = latent.shape[2] // ( num_parts - 1 )
 
         for i in range(num_parts):

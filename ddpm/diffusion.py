@@ -561,6 +561,7 @@ class Unet3D(nn.Module):
                               focus_present_mask=focus_present_mask)
             if T2I_feature is not None:
                 x = x + T2I_feature
+    
             h.append(x)
             x = downsample(x)
 
@@ -856,10 +857,11 @@ class GaussianDiffusion(nn.Module):
             cond = bert_embed(tokenize(cond)).to(device)
 
         batch_size = cond.shape[0] if exists(cond) else batch_size
-        image_size = self.image_size
-        channels = self.channels
-        num_frames = self.num_frames
 
+        image_size = self.image_size
+        num_frames = self.num_frames
+        channels = self.channels
+        
         _sample = self.p_sample_loop(
             (batch_size, channels, num_frames, image_size, image_size), cond=cond, cond_scale=cond_scale, input_image=input_image, denoising=denoising, T2I_features=T2I_features)
 

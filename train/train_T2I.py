@@ -14,7 +14,6 @@ from omegaconf import DictConfig, OmegaConf, open_dict
 from train.get_dataset import get_dataset
 import torch
 import os
-import pytorch_lightning as pl
 
 
 # NCCL_P2P_DISABLE=1 accelerate launch train/train_ddpm.py
@@ -48,7 +47,7 @@ def run(cfg: DictConfig):
     diffusion.load_state_dict(data['ema'])
     diffusion.eval()
 
-    T2I_adapter = Adapter_Medical_Diffusion()
+    T2I_adapter = Adapter_Medical_Diffusion(zero_conv=cfg.model.zero_conv)
 
     trainer = T2I_Trainer(
         T2I_model=T2I_adapter,
@@ -57,6 +56,10 @@ def run(cfg: DictConfig):
         dataset=train_dataset,
         results_folder=cfg.model.results_folder,
         num_workers=cfg.model.num_workers,
+        batch_size=cfg.model.batch_size,
+        train_lr=cfg.model.train_lr,
+        save_and_sample_every=cfg.model.save_and_sample_every,
+        train_num_steps=cfg.model.train_num_steps,
     )
 
 

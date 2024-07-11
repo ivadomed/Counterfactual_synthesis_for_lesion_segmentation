@@ -12,16 +12,16 @@ dim_mults: ???
 diffusion_timesteps: 300 # number of steps for diffusion
 
 # training parameters
+zero_conv: False # Weather to add a zero convolution layer at the ends of the model
 loss_type: l1 # L1 or L2
 train_lr: 1e-5
 batch_size: 40
 num_workers: 20
-save_and_sample_every: 1000
+save_and_sample_every: 5000
 results_folder: ???
 results_folder_postfix: ''
-train_num_steps: 100000 # total training steps
+train_num_steps: 50000 # total training steps
 gradient_accumulate_every: 2 # gradient accumulation steps
-ema_decay: 0.995 # exponential moving average decay
 amp: False # turn on mixed precision
 gpu_id: 0
 

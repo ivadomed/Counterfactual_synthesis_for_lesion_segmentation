@@ -21,6 +21,8 @@ from monai.transforms import (
     ToTensord,
     Transposed,
     Flipd,
+    Orientationd,
+    Spacingd
 )
 import os
 from typing import Optional
@@ -179,8 +181,8 @@ class BIDSDataset(Dataset):
         TRAIN_DDPM_TRANSFORMS = Compose([
             LoadImaged(keys=keys),
             EnsureChannelFirstd(keys=keys),
-            #Transposed(keys=keys, indices=(0, 3, 1, 2)),
-            #Flipd(keys=keys, spatial_axis=1),
+            Spacingd(keys=keys, pixdim=[1.0, 1.0, 1.0], mode='trilinear'),
+            Orientationd(keys=keys, axcodes='RAS'),
             ScaleIntensityRanged(keys=['data'], a_min=a_min, a_max=a_max, b_min=-1, b_max=1),
             # change here to the desired shape (/!\ must be powers of 2, GPU memory consuption is proportional to the size of the image)
             ResizeWithPadOrCropd(keys=keys, spatial_size=[32, 256, 256], mode="replicate"),
