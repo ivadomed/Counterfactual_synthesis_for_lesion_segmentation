@@ -11,13 +11,13 @@ It aditionnaly features :
 - [BIDS](https://bids.neuroimaging.io/) datasets support
   - Automatically browse into images
   - Can select given contrasts
-  - Can join derivate files to the main image
-  - Can select images with given derivate available
+  - Can join derivative files to the main image
+  - Can select images with given derivative available
 - GPU memory optimisation trick
   - Allow user to split VQ-GAN decoding in order to extend maximum image size.
 - [T2I-Adapater](https://arxiv.org/abs/2302.08453) implementation
   - Train and use T2I-Adapters (adapted from [T2I-Adapater](https://github.com/TencentARC/T2I-Adapter))
-  - Allow diffusion control from BIDS derivates after appropriate training
+  - Allow diffusion control from BIDS derivatives after appropriate training
 - Lesion sgementation by Counterfactual Synthesis
   - Image-to-Image with monitorable noising strengh
   - Analyse differences to extract lesion segmentation
@@ -74,7 +74,7 @@ You should as well make sure to specify the shape you wish to center crop/pad yo
 #### Train T2I-Adapter model
 To train the T2I-Adapter model that add a control channel to the pre-trained diffusion model, you need to run the following command :
 ```
-python train/train_T2I.py model=T2I dataset=bids dataset.root_dir=<INSERT_PATH_TO_ROOT_DIRECTORY> dataset.contrasts=[<DESIRED_CONTRATS>] dataset.derivatives=True dataset.mandatory_derivates=[control_derivate] model.results_folder=<DESIRED_RESULT_FOLDER> model.results_folder_postfix='own-dataset' model.vqgan_ckpt=<VQGAN_CHECKPOINT> model.diffusion_pt=<DDPM_CHECKPOINT> model.diffusion_img_size=128 model.diffusion_depth_size=16 model.diffusion_num_channels=8 model.dim_mults=[1,2,4,8] model.batch_size=1 model.gpu_id=0
+python train/train_T2I.py model=T2I dataset=bids dataset.root_dir=<INSERT_PATH_TO_ROOT_DIRECTORY> dataset.contrasts=[<DESIRED_CONTRATS>] dataset.derivatives=True dataset.mandatory_derivatives=[control_derivative,...] model.results_folder=<DESIRED_RESULT_FOLDER> model.results_folder_postfix='own-dataset' model.vqgan_ckpt=<VQGAN_CHECKPOINT> model.diffusion_pt=<DDPM_CHECKPOINT> model.diffusion_img_size=128 model.diffusion_depth_size=16 model.diffusion_num_channels=8 model.dim_mults=[1,2,4,8] model.batch_size=1 model.gpu_id=0
 ```
 
 ### Train on an un-formated dataset
@@ -100,7 +100,7 @@ And the difussion model's becomes :
 python train/train_ddpm.py model=ddpm dataset=default dataset.root_dir=<ROOT_DIRECTORY> model.results_folder=<DESIRED_RESULT_FOLDER> model.results_folder_postfix='own_dataset' model.vqgan_ckpt=<VQGAN_CHECKPOINT> model.diffusion_img_size=128 model.diffusion_depth_size=16 model.diffusion_num_channels=8 model.dim_mults=[1,2,4,8] model.batch_size=1 model.gpu_id=0
 ```
 
-Note that such dataset cannot take advantage of contrasts or derivate information so T2I cannot be trained with unbidsified data just yet.
+Note that such dataset cannot take advantage of contrasts or derivative information so T2I cannot be trained with unbidsified data just yet.
 
 
 ## Acknowledgement

@@ -3,5 +3,5 @@ root_dir: ???
 image_channels: 1
 is_VQGAN: False
 contrasts: ['T2w']
-mandatory_derivates: [] # list of mandatory derivatives, used by the T2I model to make sure the condition is present in the dataset
+mandatory_derivatives: [] # list of mandatory derivatives, used by the T2I model to make sure the condition is present in the dataset
 derivatives: True

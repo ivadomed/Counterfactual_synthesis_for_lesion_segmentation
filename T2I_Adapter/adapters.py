@@ -244,9 +244,9 @@ class Adapter_Medical_Diffusion(nn.Module):
         return features
 
 class T2I_Trainer(object):
-    def __init__(self, T2I_model=None, T2I_derivate_name=None, diffusion_model=None, amp=False, dataset=None, batch_size=1, save_and_sample_every=5000, train_lr=1e-5, train_num_steps=50000, gradient_accumulate_every=2, results_folder='./results', num_workers=20):
+    def __init__(self, T2I_model=None, T2I_derivative_name=None, diffusion_model=None, amp=False, dataset=None, batch_size=1, save_and_sample_every=5000, train_lr=1e-5, train_num_steps=50000, gradient_accumulate_every=2, results_folder='./results', num_workers=20):
         self.T2I_model = T2I_model.cuda()
-        self.T2I_derivate_name = T2I_derivate_name
+        self.T2I_derivative_name = T2I_derivative_name
         self.diffusion = diffusion_model
         self.dataset = dataset
         self.batch_size = batch_size
@@ -300,7 +300,7 @@ class T2I_Trainer(object):
             for i in range(self.gradient_accumulate_every):
                 sample = next(self.dl)
                 image = sample['data'].cuda()
-                T2I_image = sample[self.T2I_derivate_name].cuda()
+                T2I_image = sample[self.T2I_derivative_name].cuda()
                 with autocast(enabled=self.amp):
                     T2I_features = self.T2I_model(T2I_image)
                     loss = self.diffusion(
@@ -332,7 +332,7 @@ class T2I_Trainer(object):
                 with torch.no_grad():
                     self.T2I_model.eval()
                     sample = next(self.dl)
-                    T2I_image = sample[self.T2I_derivate_name].cuda()
+                    T2I_image = sample[self.T2I_derivative_name].cuda()
                     T2I_features = self.T2I_model(T2I_image)
                     image = sample['data'].cuda()
                     inference = self.diffusion.sample(batch_size=1, T2I_features = T2I_features)

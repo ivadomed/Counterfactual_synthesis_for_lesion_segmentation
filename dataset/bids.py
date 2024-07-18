@@ -33,7 +33,7 @@ import time
 
 
 class BIDSDataset(Dataset):
-    def __init__(self, root_dir: str, is_VQGAN: bool = False, contrasts = [], derivatives: bool = False, mandatory_derivates=[]):
+    def __init__(self, root_dir: str, is_VQGAN: bool = False, contrasts = [], derivatives: bool = False, mandatory_derivatives=[]):
         super().__init__()
         self.root_dir = root_dir
 
@@ -53,7 +53,7 @@ class BIDSDataset(Dataset):
         
         if self.derivatives:
             #list of derivatives that must be present in the derivatives folder in order to be considered
-            self.mandatory_derivates = mandatory_derivates
+            self.mandatory_derivatives = mandatory_derivatives
             self.check_mandatory_derivatives()
         
         print(f'Found {len(self.file_paths)} files in {self.root_dir}')
@@ -64,7 +64,7 @@ class BIDSDataset(Dataset):
         """
         idx_to_pop = []
         for idx, derivative_paths in enumerate(self.derivatives_paths):
-            for mandatory_derivative in self.mandatory_derivates:
+            for mandatory_derivative in self.mandatory_derivatives:
                 if mandatory_derivative not in derivative_paths:
                     idx_to_pop.append(idx)
                     break
@@ -88,9 +88,9 @@ class BIDSDataset(Dataset):
                     derivative_key = file_deriv.split('_')[-1].split('.')[0]
                     file_path = file_deriv.split('_'+derivative_key)[0]+'.nii.gz'
                     if file_path in derivatives_files_paths:
-                        derivatives_files_paths[file_path].append({'derivative_key':derivative_key, 'derivate_path':os.path.join(root_deriv, file_deriv)})
+                        derivatives_files_paths[file_path].append({'derivative_key':derivative_key, 'derivative_path':os.path.join(root_deriv, file_deriv)})
                     else:
-                        derivatives_files_paths[file_path] = [{'derivative_key':derivative_key, 'derivate_path':os.path.join(root_deriv, file_deriv)}]
+                        derivatives_files_paths[file_path] = [{'derivative_key':derivative_key, 'derivative_path':os.path.join(root_deriv, file_deriv)}]
         return derivatives_files_paths
         
     
@@ -104,7 +104,7 @@ class BIDSDataset(Dataset):
         if file in derivatives_files_paths:
             for derivative_dict in derivatives_files_paths[file]:
                 derivative_key = derivative_dict['derivative_key']
-                derivative_path = derivative_dict['derivate_path']
+                derivative_path = derivative_dict['derivative_path']
                 self.derivatives_paths[-1][derivative_key] = derivative_path
     
 
