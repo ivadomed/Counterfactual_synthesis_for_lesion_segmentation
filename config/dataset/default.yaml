@@ -1,3 +1,4 @@
 name: DEFAULT
 root_dir: ???
 image_channels: 1
+is_VQGAN: False

@@ -87,6 +87,8 @@ class VQGAN(pl.LightningModule):
         self.l1_weight = cfg.model.l1_weight
         self.save_hyperparameters()
 
+        self.decoding_diviser = cfg.model.decoding_diviser
+
     def encode(self, x, include_embeddings=False, quantize=True):
         h = self.pre_vq_conv(self.encoder(x))
         if quantize:
@@ -96,14 +98,53 @@ class VQGAN(pl.LightningModule):
             else:
                 return vq_output['encodings']
         return h
+    
+    def merge_images(self, img1, img2):
+        assert img1.shape[3:] == img2.shape[3:], "Images must have the same shape across Y and Z axis"
 
-    def decode(self, latent, quantize=False):
-        if quantize:
-            vq_output = self.codebook(latent)
-            latent = vq_output['encodings']
-        h = F.embedding(latent, self.codebook.embeddings)
-        h = self.post_vq_conv(shift_dim(h, -1, 1))
-        return self.decoder(h)
+        fade_length = img2.shape[2] // 2
+        fade_factor = np.linspace(0, 1, fade_length)
+        fade_factor = [fade_factor] * img2.shape[1]
+        fade_factor = [fade_factor] * img2.shape[0]
+        fade_factor = [fade_factor] * img2.shape[3]
+        fade_factor = [fade_factor] * img2.shape[4]  
+        fade_factor = np.array(fade_factor)
+        fade_factor = np.transpose(fade_factor, (2,3,4,1,0))
+
+
+        fade1 = img1[:,:, -fade_length:, :, :] * (1-fade_factor)
+        fade2 = img2[:,:, :fade_length, :, :] * fade_factor
+
+        fade = fade1 + fade2
+        merged = np.concatenate((img1[:,:, :-fade_length, :, :], fade, img2[:,:, fade_length:, :, :]), axis=2)
+
+        return merged
+
+    def decode(self, latent, quantize=True):
+        num_parts = self.decoding_diviser  # Set the desired number of parts
+        part_size = latent.shape[2] // ( num_parts - 1 )
+
+        for i in range(num_parts):
+            start_idx = i * (part_size//2)
+            end_idx = (i + 2) * (part_size//2)
+            latent_part = latent[:, :, start_idx:end_idx, :, :]
+            if quantize:
+                vq_output = self.codebook(latent_part)
+                latent_part = vq_output['encodings']
+            h = F.embedding(latent_part, self.codebook.embeddings)
+            h = self.post_vq_conv(shift_dim(h, -1, 1))
+            decoded_part = self.decoder(h)
+            # convert to numpy
+            decoded_part_np = decoded_part.detach().cpu().numpy()
+            del h, latent_part, decoded_part
+            if i == 0:
+                decoded = decoded_part_np
+            else:
+                decoded = self.merge_images(decoded, decoded_part_np)
+        # decoded back to torch
+        decoded = torch.from_numpy(decoded).to(self.device)
+        return decoded
+
 
     def forward(self, x, optimizer_idx=None, log_image=False):
         B, C, T, H, W = x.shape
@@ -115,7 +156,7 @@ class VQGAN(pl.LightningModule):
         recon_loss = F.l1_loss(x_recon, x) * self.l1_weight
 
         # Selects one random 2D image from each 3D Image
-        frame_idx = torch.randint(0, T, [B]).cuda()
+        frame_idx = torch.randint(0, T, [B]).to(self.device)
         frame_idx_selected = frame_idx.reshape(-1,
                                                1, 1, 1, 1).repeat(1, C, 1, H, W)
         frames = torch.gather(x, 2, frame_idx_selected).squeeze(2)

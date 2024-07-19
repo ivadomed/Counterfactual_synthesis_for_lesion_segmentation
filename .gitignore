@@ -148,10 +148,12 @@ checkpoints*/
 debug*/
 wandb*/
 *.nii
+*.csv
 cache/
 outputs/
 
 .vscode/
+
 
 
 

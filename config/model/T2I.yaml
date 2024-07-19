@@ -1,0 +1,33 @@
+# Defining the T2I model configuration
+vqgan_ckpt: ???
+diffusion_pt: ???
+T2I_pt: False
+
+
+# Features of the associated diffusion model
+diffusion_img_size: ???
+diffusion_depth_size: ???
+diffusion_num_channels: ???
+dim_mults: ???
+diffusion_timesteps: 300 # number of steps for diffusion
+
+# training parameters
+zero_conv: False # Weather to add a zero convolution layer at the ends of the model
+loss_type: l1 # L1 or L2
+train_lr: 1e-5
+batch_size: 40
+num_workers: 20
+save_and_sample_every: 5000
+results_folder: ???
+results_folder_postfix: ''
+train_num_steps: 50000 # total training steps
+gradient_accumulate_every: 2 # gradient accumulation steps
+amp: False # turn on mixed precision
+gpu_id: 0
+
+
+
+
+
+
+

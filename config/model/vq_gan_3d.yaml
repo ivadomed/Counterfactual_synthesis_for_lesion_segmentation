@@ -4,7 +4,7 @@ num_workers: 30
 
 gpus: 1
 accumulate_grad_batches: 1
-default_root_dir: /data/home/firas/Desktop/work/other_groups/medicaldiffusion/checkpoints/vq_gan/
+default_root_dir: ???
 default_root_dir_postfix: ''
 resume_from_checkpoint:
 max_steps: -1
@@ -33,5 +33,8 @@ no_random_restart: False
 norm_type: group
 padding_type: replicate
 num_groups: 32
+
+# in how many steps does the decoder will run in order to save VRAM
+decoding_diviser: 3
 
 

@@ -1,6 +1,10 @@
 "Adapted from https://github.com/SongweiGe/TATS"
 
+# add the main folder to the path so the modules can be imported without errors
 import os
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 from torch.utils.data import DataLoader
@@ -48,7 +52,7 @@ def run(cfg: DictConfig):
 
     # load the most recent checkpoint file
     base_dir = os.path.join(cfg.model.default_root_dir, 'lightning_logs')
-    if os.path.exists(base_dir):
+    if os.path.exists(base_dir):   
         log_folder = ckpt_file = ''
         version_id_used = step_used = 0
         for folder in os.listdir(base_dir):
@@ -68,10 +72,11 @@ def run(cfg: DictConfig):
                     ckpt_folder, ckpt_file)
                 print('will start from the recent ckpt %s' %
                       cfg.model.resume_from_checkpoint)
-
+        
     accelerator = None
     if cfg.model.gpus > 1:
         accelerator = 'ddp'
+    
 
     trainer = pl.Trainer(
         gpus=cfg.model.gpus,
@@ -85,7 +90,7 @@ def run(cfg: DictConfig):
         gradient_clip_val=cfg.model.gradient_clip_val,
         accelerator=accelerator,
     )
-
+    
     trainer.fit(model, train_dataloader, val_dataloader)
 
 
